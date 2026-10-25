@@ -1,0 +1,772 @@
+{
+  "source_repository": "https://github.com/LilJay-H/CourseComplier",
+  "source_commit": "4d2aa0cd4284bf9c45e106e80fb9d7736b1f2338",
+  "extracted_on": "2026-10-25",
+  "files": [
+    {
+      "source": "src/handouter/alignment.py",
+      "destination": "src/handouter/alignment.py",
+      "source_sha256": "9635d98b456f292e2abcea32790d36befde54d279a126f783bc037d5f2f8ab2f"
+    },
+    {
+      "source": "src/handouter/asr.py",
+      "destination": "src/handouter/asr.py",
+      "source_sha256": "4f25f1a17e3ed35f36b1514bb27e4f4fcf0f45fabae578864dcc0a54837847ec"
+    },
+    {
+      "source": "src/handouter/audit_adjudication.py",
+      "destination": "src/handouter/audit_adjudication.py",
+      "source_sha256": "8b2aff8fb8ffac08c61eb53fad8a91909700f3c275f4353588843edbdbe8e3b9"
+    },
+    {
+      "source": "src/handouter/audit_chunks.py",
+      "destination": "src/handouter/audit_chunks.py",
+      "source_sha256": "0c8c16ebd157b97193cac1c26c0786338a80378f67bdd9143c7686959c9827b3"
+    },
+    {
+      "source": "src/handouter/audit_session.py",
+      "destination": "src/handouter/audit_session.py",
+      "source_sha256": "4ccf1f0a69eaa5fdb4aabba4b28b7a220b2fdb4be1ba3940d47f8dd1d333badf"
+    },
+    {
+      "source": "src/handouter/audit_stages.py",
+      "destination": "src/handouter/audit_stages.py",
+      "source_sha256": "8096c4c410d89d0dbe8fb1459bcda2bbc1d77d83cd3ce8a689cd152e652b19c3"
+    },
+    {
+      "source": "src/handouter/authoring.py",
+      "destination": "src/handouter/authoring.py",
+      "source_sha256": "61df01308119065e798eaa71871162eb32a5994a89bdc32a96850df2e6d7e49e"
+    },
+    {
+      "source": "src/handouter/authoring_audit.py",
+      "destination": "src/handouter/authoring_audit.py",
+      "source_sha256": "615968ec3e48df19f7792c11e459c3a086930941cd61180812e177792d8ece11"
+    },
+    {
+      "source": "src/handouter/authoring_eval.py",
+      "destination": "src/handouter/authoring_eval.py",
+      "source_sha256": "1686006468580f6d1cf104ecc6dde0cadcbc841985754c2e1f2d623bf1fdc0a3"
+    },
+    {
+      "source": "src/handouter/authoring_repair.py",
+      "destination": "src/handouter/authoring_repair.py",
+      "source_sha256": "8610e875c3a80eb4c4cfba010525cc3ad03d5f2dca1e41487167a8839db4eec4"
+    },
+    {
+      "source": "src/handouter/authoring_stages.py",
+      "destination": "src/handouter/authoring_stages.py",
+      "source_sha256": "de42cfee97f7521d5102ffde7644015bdbb31e837c34a4e75819ab9669e19638"
+    },
+    {
+      "source": "src/handouter/authoring_v2.py",
+      "destination": "src/handouter/authoring_v2.py",
+      "source_sha256": "6caab64b51e0ae59542bbd943ba7817d738adad9177a85d514afa4a97cbfc70d"
+    },
+    {
+      "source": "src/handouter/cli.py",
+      "destination": "src/handouter/cli.py",
+      "source_sha256": "d42bc7e7986ac4134e8c626a2546030186a57c25c11fc1736310235aa182d532"
+    },
+    {
+      "source": "src/handouter/composer.py",
+      "destination": "src/handouter/composer.py",
+      "source_sha256": "b92c44fb471e2621cbb39e0594cddfd79b1722c9b5d1fe761589d1ee632e188a"
+    },
+    {
+      "source": "src/handouter/composition_store.py",
+      "destination": "src/handouter/composition_store.py",
+      "source_sha256": "858c0c9036513191b79044ef05fda732cc936b2afa008f80c9e0e210ca9ff68a"
+    },
+    {
+      "source": "src/handouter/credentials.py",
+      "destination": "src/handouter/credentials.py",
+      "source_sha256": "a5be9d91bd85303fda4ac54f149692ad5d95a97fac6886406c20e7dd50e81039"
+    },
+    {
+      "source": "src/handouter/delivery.py",
+      "destination": "src/handouter/delivery.py",
+      "source_sha256": "0692e3de8289d596a936973ece5911ec5ff0ac2b5418294f75fbae6de766295e"
+    },
+    {
+      "source": "src/handouter/doctor.py",
+      "destination": "src/handouter/doctor.py",
+      "source_sha256": "6cd839100a6f959830a8fcfcac26a90edee3b9d604cc44a7f235d527ef83836e"
+    },
+    {
+      "source": "src/handouter/editorial_context.py",
+      "destination": "src/handouter/editorial_context.py",
+      "source_sha256": "c2d872ac051c7dc7e8c0bc5427dc543f379bf29f0357e40ea9c29cf1ed2911fe"
+    },
+    {
+      "source": "src/handouter/editorial_review.py",
+      "destination": "src/handouter/editorial_review.py",
+      "source_sha256": "a55e5114fedb4fd5558b116a1893cc3d897881f36ebad88dde0631e1a64f9821"
+    },
+    {
+      "source": "src/handouter/handoff.py",
+      "destination": "src/handouter/handoff.py",
+      "source_sha256": "5aeb16601a54ab97df20e4f3921a806020481690040fc10136cf0a6b8e396497"
+    },
+    {
+      "source": "src/handouter/html_core.py",
+      "destination": "src/handouter/html_core.py",
+      "source_sha256": "81c5351797330134b041f27ddcc48d6379cbaca19f1a5b58506d450863615930"
+    },
+    {
+      "source": "src/handouter/html_export.py",
+      "destination": "src/handouter/html_export.py",
+      "source_sha256": "84dd83205142b41d7b4f8bc94329c62ff3881e9574ada6f6e501378b2fe51d91"
+    },
+    {
+      "source": "src/handouter/importers.py",
+      "destination": "src/handouter/importers.py",
+      "source_sha256": "b42e37405f953119665d01db52f56731bf971b589ff5af590eac0eddcb035548"
+    },
+    {
+      "source": "src/handouter/invocation_receipts.py",
+      "destination": "src/handouter/invocation_receipts.py",
+      "source_sha256": "7d3d0e3a79b69aa9285208a459cc9801662baee28f5600c471c9ca09357d74ae"
+    },
+    {
+      "source": "src/handouter/local_agent_workflow.py",
+      "destination": "src/handouter/local_agent_workflow.py",
+      "source_sha256": "266159abf2b4473b28c0116d7cfb5277107aedbee690c71414f4e0a0c2014f43"
+    },
+    {
+      "source": "src/handouter/math_markup.py",
+      "destination": "src/handouter/math_markup.py",
+      "source_sha256": "88e74af85c00bea4e6337fcecbbab873b906815e8ab570584019fa512d27ba76"
+    },
+    {
+      "source": "src/handouter/media.py",
+      "destination": "src/handouter/media.py",
+      "source_sha256": "224a070872382338bf039d6001e00d0aae35c3586b0d1f55cbc1db92d2f29913"
+    },
+    {
+      "source": "src/handouter/note_validation.py",
+      "destination": "src/handouter/note_validation.py",
+      "source_sha256": "846ad871f3855c86dbde0f4b6a8e9c2063da922466d21454cd79782c88694684"
+    },
+    {
+      "source": "src/handouter/numeric_review.py",
+      "destination": "src/handouter/numeric_review.py",
+      "source_sha256": "0598551845b6501cb7e29e7b6f72b39e6188a0c8c4efc104dfb28215f90fccce"
+    },
+    {
+      "source": "src/handouter/organization.py",
+      "destination": "src/handouter/organization.py",
+      "source_sha256": "9d60aae24beb39e1c90f5c66886713d4fbee0376fa56b0fbd52c9c815ac67aa7"
+    },
+    {
+      "source": "src/handouter/output_refs.py",
+      "destination": "src/handouter/output_refs.py",
+      "source_sha256": "f3da2b5c44af36ca8d0189b9cf82b03689103f135edd0b8dac024f90fb4272e1"
+    },
+    {
+      "source": "src/handouter/platform_support.py",
+      "destination": "src/handouter/platform_support.py",
+      "source_sha256": "d1d78e14073b7906f5504a5e884b60dd303a697db39c7810bbc940eb73ede138"
+    },
+    {
+      "source": "src/handouter/product.py",
+      "destination": "src/handouter/product.py",
+      "source_sha256": "28aded77df940cc0946731c0598528a0a2cab2204b897b55ac0898b8e8bddcc6"
+    },
+    {
+      "source": "src/handouter/quality_host.py",
+      "destination": "src/handouter/quality_host.py",
+      "source_sha256": "139b6df2161eabec4722e0d46a458a50eb2728dd60d98aed1ea2cf5245948c2c"
+    },
+    {
+      "source": "src/handouter/resources.py",
+      "destination": "src/handouter/resources.py",
+      "source_sha256": "a971752cdc5c46ab772dc65fc3188983a8719f6f53a7437a74227ca1379c26bb"
+    },
+    {
+      "source": "src/handouter/revision.py",
+      "destination": "src/handouter/revision.py",
+      "source_sha256": "131cd3e56a9739602ccc581114c749e95982d3bffe22f7ba99fc7adb6086f740"
+    },
+    {
+      "source": "src/handouter/runtime_tools.py",
+      "destination": "src/handouter/runtime_tools.py",
+      "source_sha256": "01e1bb7a5822abf545a48c6fc02c0f602e5e08f6ae416f2ffcb93197bac0743a"
+    },
+    {
+      "source": "src/handouter/safe_io.py",
+      "destination": "src/handouter/safe_io.py",
+      "source_sha256": "923d94511274abfd3387fb32e0a5a93edcc679b50f2b85ef838e9b489baa0f6a"
+    },
+    {
+      "source": "src/handouter/safe_io_core.py",
+      "destination": "src/handouter/safe_io_core.py",
+      "source_sha256": "ae3f07c3b5a6d8475b0c2d92e6c27946caa8921525ada00cbf3678c503035e24"
+    },
+    {
+      "source": "src/handouter/service.py",
+      "destination": "src/handouter/service.py",
+      "source_sha256": "2e4ac85d35597a33c34f89693fdb78530cd7ea66da9977eeb43e23ef90e21e08"
+    },
+    {
+      "source": "src/handouter/settings.py",
+      "destination": "src/handouter/settings.py",
+      "source_sha256": "88bc86d455201c850fce02507d7f33a26d4fc5c4a784b9565d1292a4407b46de"
+    },
+    {
+      "source": "src/handouter/skill_plan.py",
+      "destination": "src/handouter/skill_plan.py",
+      "source_sha256": "085e0edbc7cc968b582d045c7836ab39d258ad0bfff53dfd7d8c8337b1b9d5d5"
+    },
+    {
+      "source": "src/handouter/source_excerpt.py",
+      "destination": "src/handouter/source_excerpt.py",
+      "source_sha256": "441fec3f3ad078fbb5ac078cef351cb45c6f2e317d82b97ae496fc06549605d8"
+    },
+    {
+      "source": "src/handouter/source_quotes.py",
+      "destination": "src/handouter/source_quotes.py",
+      "source_sha256": "5fb15e667804d23fa5f2040c9dec1f5c2677c1b6988562909f03df2b0fc320e1"
+    },
+    {
+      "source": "src/handouter/source_refs.py",
+      "destination": "src/handouter/source_refs.py",
+      "source_sha256": "448bb165259697db68eea10a4cecda3f842e9c339c3f0ed0292fca2e4becd8eb"
+    },
+    {
+      "source": "src/handouter/stage_cache.py",
+      "destination": "src/handouter/stage_cache.py",
+      "source_sha256": "3e6d83ba47d2d78532c8b3fc14b57c9bbb3f8192c244cb077f5f00b99326b3c9"
+    },
+    {
+      "source": "src/handouter/tasks.py",
+      "destination": "src/handouter/tasks.py",
+      "source_sha256": "f4d6f31d9edf9c8a5445d9c861c14e352b56c2280087e4925368ed316ce5baa3"
+    },
+    {
+      "source": "src/handouter/transactions.py",
+      "destination": "src/handouter/transactions.py",
+      "source_sha256": "240cd88ac1e9f4df6eac562355ea82a8ffa61f73b3bf64d5d2d626452deb9c1c"
+    },
+    {
+      "source": "src/handouter/tui.py",
+      "destination": "src/handouter/tui.py",
+      "source_sha256": "6c38221360da56d2207f0628ac7465be386ac9a1c902fcc89fac46d6f1c3632e"
+    },
+    {
+      "source": "src/handouter/typora_export.py",
+      "destination": "src/handouter/typora_export.py",
+      "source_sha256": "52fcda1e28434d2e701e5cb8baad0c7b128ef828fca27ea549359e370d66fe8d"
+    },
+    {
+      "source": "src/handouter/typora_math.py",
+      "destination": "src/handouter/typora_math.py",
+      "source_sha256": "fcb23329d9ba2516eed107f79f517bba98f6567b413d6b4da7b221ccdbd213ab"
+    },
+    {
+      "source": "src/handouter/validation.py",
+      "destination": "src/handouter/validation.py",
+      "source_sha256": "ab29f4f6ffddd9fd442ce1a53cf5426a8bb6e65c47858a88042459b5799795ac"
+    },
+    {
+      "source": "src/handouter/web_text.py",
+      "destination": "src/handouter/web_text.py",
+      "source_sha256": "48030ef42eb7c97706be31e169fb60df3be3811dc9920682cc41efdf28b75d30"
+    },
+    {
+      "source": "src/handouter/workspace.py",
+      "destination": "src/handouter/workspace.py",
+      "source_sha256": "e37be06b7a43739b7a055be69837251c3803582c0513bdd66ded39b16dd9e75d"
+    },
+    {
+      "source": "src/handouter/__init__.py",
+      "destination": "src/handouter/__init__.py",
+      "source_sha256": "7c0ac16a29e6a0f3012169f349594614043337c5ccb7b23c407635010835f46d"
+    },
+    {
+      "source": "src/handouter/__main__.py",
+      "destination": "src/handouter/__main__.py",
+      "source_sha256": "b2557ccf866c981fd65bc19b07e7280cc6963a4ee9558bbc1a08fa3cbe5e6158"
+    },
+    {
+      "source": "src/handouter/agents/base.py",
+      "destination": "src/handouter/agents/base.py",
+      "source_sha256": "59f29716008e5becb21accc626ab8a35b3ffce3de7c09c430153561ae50ee188"
+    },
+    {
+      "source": "src/handouter/agents/claude.py",
+      "destination": "src/handouter/agents/claude.py",
+      "source_sha256": "05a30a07a2cfc16eaac0f95960f46b9504c26d5825515b90067d9dc0e791ab46"
+    },
+    {
+      "source": "src/handouter/agents/codex.py",
+      "destination": "src/handouter/agents/codex.py",
+      "source_sha256": "46ae683ff114541d48c31b5f0c6d18763711bf3a17bfc9b8adeb2516bea221b1"
+    },
+    {
+      "source": "src/handouter/agents/manual.py",
+      "destination": "src/handouter/agents/manual.py",
+      "source_sha256": "be1248fb532532e9fdcc7f792a76ab049f46f318ff1c2b35587d18f079271526"
+    },
+    {
+      "source": "src/handouter/agents/runner.py",
+      "destination": "src/handouter/agents/runner.py",
+      "source_sha256": "dd6b62a441dd9235f281edc07c9e19216cefe8226d1cd2bcd27fc7292b4c24de"
+    },
+    {
+      "source": "src/handouter/agents/web.py",
+      "destination": "src/handouter/agents/web.py",
+      "source_sha256": "bbde23fee951342a748bc9c30984f7d80d31c70eaff055eb33847ae7df20fa6b"
+    },
+    {
+      "source": "src/handouter/agents/__init__.py",
+      "destination": "src/handouter/agents/__init__.py",
+      "source_sha256": "7825972115e4c9e1b09773fb290985457fd3d611c831a3b0370d4983c2fd62d0"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/SKILL.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/SKILL.md",
+      "source_sha256": "56af1e3e79f7d95f5f2a5499a027ee56c422d765ebb9afabdfe3b323c1deb143"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/HANDOFF_PROMPT.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/HANDOFF_PROMPT.md",
+      "source_sha256": "12790f43e371c25a0faf47ed40feae94a17f2129a59371081d7cfb040b0b8e68"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/common/completion.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/common/completion.md",
+      "source_sha256": "4dde2dceef22c927dbf6141d0095d7115b91ec8bafd13b693b70d36c947ea72a"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/common/delivery.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/common/delivery.md",
+      "source_sha256": "4d42f6c06e0c1467844bc50b21e2326d47ca81c283fa42eb214041923749cf7d"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/common/editing.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/common/editing.md",
+      "source_sha256": "ae734a33de6b4590022a924ba1d5ac8fecbe66150a8c90915cb842e4bae7062e"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/common/evidence.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/common/evidence.md",
+      "source_sha256": "e589f162b557147db4c36e8e7085732ae875b9cd5eabccb3cabd65a8b9f9c6b0"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/common/presentation.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/common/presentation.md",
+      "source_sha256": "ad9bec32722498ea2d8f86f7f29943207550c358001e12855ece8d23eebd6db6"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/common/teaching.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/common/teaching.md",
+      "source_sha256": "ea34031c9fd98095856e336f6d3eecd3a1780fd009ae8d2fcc1e777b0054d90b"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/common/writing.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/common/writing.md",
+      "source_sha256": "bdff3740be31062ed4dd12a4b512aa720d05f55d7b5772a6c86d1e2142eb8104"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/examples/complete.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/examples/complete.md",
+      "source_sha256": "f90ccc1f8666b90847984e3bb76d59a15021b9fbc53e9bf1d8add68aee73abc8"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/examples/deep.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/examples/deep.md",
+      "source_sha256": "a43638d10993c8591ccb4faf1695d99e2565af64cb370eee2ddcb744a5eca283"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/examples/full.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/examples/full.md",
+      "source_sha256": "2d398596ce51cb328ac3f7b9ce5b4e5771df436fcb915afc1c3223ea9d52a21a"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/examples/sources.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/examples/sources.md",
+      "source_sha256": "b962d490d645bfa4ec235467004a76a2a51e3da320aa9ba87ce0b170aa35e6bd"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/examples/summary.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/examples/summary.md",
+      "source_sha256": "b2c5d2d8ea7004f67bc5996a04edff9a0513fd92acdfdc248a62782474130dd3"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/examples/teaching-synthetic.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/examples/teaching-synthetic.md",
+      "source_sha256": "3137a57d2e3d0f6feb38d50627eb1914575550032631110ffc32a426c72d15c8"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/examples/verbatim.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/examples/verbatim.md",
+      "source_sha256": "7fdce5ef7e5bade12bec613bd604ae18b8df537b499ce7a8230abcacc7a60446"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/examples/visual.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/examples/visual.md",
+      "source_sha256": "955b29d09e5f0b93dbb18c72eafda5018cb4487f4e933385f0d39985ec1ffe3a"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/execution/authoring.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/execution/authoring.md",
+      "source_sha256": "b0de521d64acada1464e61e0bc6384bd6e01f864fd56be5ee1038bafd5233728"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/execution/formal-reasoning.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/execution/formal-reasoning.md",
+      "source_sha256": "6e948878750529901b4ca96bbc81e50de8a0732b4dcf6bc57e2d91151053be4a"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/execution/long-course.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/execution/long-course.md",
+      "source_sha256": "b4bfd3110f99e7c3ce324a81d5c708db97d2e3f1f549049b849811228d9ecfe1"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/execution/multi-output.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/execution/multi-output.md",
+      "source_sha256": "5d78599d8422638b5024dd291db775fbf359c9a51cccb31ee8e0d2099a17c8a7"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/formats/clean.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/formats/clean.md",
+      "source_sha256": "bdb2eaf65a7835807e20654b9553698a3187a87635003903ceffee5a8a19a3ee"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/formats/traceable.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/formats/traceable.md",
+      "source_sha256": "c30835076f61fd58c2e28815d31f6580bc891903c12b2f8d61bb08940f11e442"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/modes/complete.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/modes/complete.md",
+      "source_sha256": "c1b96e403cb8e48649950b34fef884e07a4b91542606852218c95bea9926c2b3"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/modes/deep.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/modes/deep.md",
+      "source_sha256": "541668061e71d10e8de65122f73866713485b3e57e39dc36684e0dd49f0ef4dc"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/modes/full.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/modes/full.md",
+      "source_sha256": "3b632ec0d450209d142a3978b9b64a1e87aed8c488b961f0425ba69c870557ca"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/modes/summary.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/modes/summary.md",
+      "source_sha256": "637474eb4f6992197a9db6f85ebab869a1902794a8006f56f2e95f1ce415fa97"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/modes/verbatim.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/modes/verbatim.md",
+      "source_sha256": "fe4219969005ff672859d8a19aa67535c336150e8955a6cb7f67db06b6cca16f"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/slides/embed.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/slides/embed.md",
+      "source_sha256": "4fb240efaebd837ec1070f4e5a959770dc697f71202c55bf6a11ac2997928b2d"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/slides/ignore.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/slides/ignore.md",
+      "source_sha256": "a2b692bf58906c34e9301c145d856b3b474085a488d4ee11931a20a0d750dddf"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/slides/layout.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/slides/layout.md",
+      "source_sha256": "aaf655ead176e2908d3e046e0a62b1d0c864bc318864b5c83bff5ccfccfeff5c"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/slides/reading.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/slides/reading.md",
+      "source_sha256": "a2757ba5e9047f376848371ec6b10cf59d203333adccb1863c688a339d81371d"
+    },
+    {
+      "source": ".agents/skills/zhiyun-lecture-notes/references/slides/source-only.md",
+      "destination": ".agents/skills/zhiyun-lecture-notes/references/slides/source-only.md",
+      "source_sha256": "baae28f4979fa92eadd3d434597e81c068a4935ae916bc8be16739ac369aadd3"
+    },
+    {
+      "source": "pyproject.toml",
+      "destination": "pyproject.toml",
+      "source_sha256": "6ea51a71fd6f423de97b0da1aaf7f243e0c0b5ab9025be34329148ebeccb42af"
+    },
+    {
+      "source": "handouter_build.py",
+      "destination": "handouter_build.py",
+      "source_sha256": "2f2a830d43f6b7776a000ca8b6b47023e1f5ab742768524445f792f46b02f9a0"
+    },
+    {
+      "source": "setup_handouter.py",
+      "destination": "setup_handouter.py",
+      "source_sha256": "bd286592ff1e624302c3922d11f841c47cda22777e070f943faa885ac7e7f60d"
+    },
+    {
+      "source": "zhiyun_exporter.user.js",
+      "destination": "zhiyun_exporter.user.js",
+      "source_sha256": "23201414c61a991c53e0267da936c2b9567b4d141ebc98dbcb1a8215052bf385"
+    },
+    {
+      "source": "scripts/build_release.py",
+      "destination": "scripts/build_release.py",
+      "source_sha256": "c1092e6e79ce7716f1ac117e1f759057cb6c993192e0319f28b58dc12231a1b8"
+    },
+    {
+      "source": "scripts/third_party_runtime.json",
+      "destination": "scripts/third_party_runtime.json",
+      "source_sha256": "a6042765a2b640cb7260034a1c149ffca3f0f38784d5f99a2b8549931fedef95"
+    },
+    {
+      "source": "setup-handouter.cmd",
+      "destination": "setup-handouter.cmd",
+      "source_sha256": "f62e7094e1b0d7d4052a3cd2fd46a5bf3ca8ce70e4986f970a75964882611f04"
+    },
+    {
+      "source": "setup-handouter.command",
+      "destination": "setup-handouter.command",
+      "source_sha256": "664512518f9f31e60b5bac199ba2fc45d052e9ed759bcff6060174e86ef06962"
+    },
+    {
+      "source": "start-handouter.cmd",
+      "destination": "start-handouter.cmd",
+      "source_sha256": "a4bfbbc26550563f0b363de15bf406f69f8d3306bd7a3be60dc229aac89a2809"
+    },
+    {
+      "source": "start-handouter.command",
+      "destination": "start-handouter.command",
+      "source_sha256": "9f8e107b8e167e0d0a527658ebe38e1e67878b507ecaeb8025db67f232fd784a"
+    },
+    {
+      "source": "setup-course-compiler.cmd",
+      "destination": "setup-course-compiler.cmd",
+      "source_sha256": "7aff03281fe680dae373e68957aefffce3f2aee66082589ce12221e2daaece54"
+    },
+    {
+      "source": "setup-course-compiler.command",
+      "destination": "setup-course-compiler.command",
+      "source_sha256": "1cb34d37262fc8ba167643b5c776f102bbe239b9f32662eb1fffb42ee3ac6945"
+    },
+    {
+      "source": "start-course-compiler.cmd",
+      "destination": "start-course-compiler.cmd",
+      "source_sha256": "9bc0de62f6bf10f3757318bd5a5279ff3af3f2297fc57261984de26ea0637f55"
+    },
+    {
+      "source": "start-course-compiler.command",
+      "destination": "start-course-compiler.command",
+      "source_sha256": "5d814a57a54a656905c91d43c4bae7b9c5dcab7364fd1dfbcc1aba245b2ab49f"
+    },
+    {
+      "source": "export-html.cmd",
+      "destination": "export-html.cmd",
+      "source_sha256": "0075cf74d4de62a43812b8f2f6dc384c2259bb732a2db29991970675de86afa9"
+    },
+    {
+      "source": "docs/SLIDE_IMPORT.md",
+      "destination": "docs/SLIDE_IMPORT.md",
+      "source_sha256": "b313f114918f59ab9cdc96a22616f06b0789d9b65a662e472c3e7f904f6d0ebd"
+    },
+    {
+      "source": "docs/OUTPUT_ORGANIZATION.md",
+      "destination": "docs/OUTPUT_ORGANIZATION.md",
+      "source_sha256": "ad16149ce9483f463d729a6ed42d2b205ad7897a7aa3d86814aa26e660c86231"
+    },
+    {
+      "source": "docs/LOCAL_EDITORIAL_FLOW.md",
+      "destination": "docs/LOCAL_EDITORIAL_FLOW.md",
+      "source_sha256": "cdbbc6583e3cd6250142e7da834e64e035bc3a4924128fc4e81086935b37e4fc"
+    },
+    {
+      "source": "docs/LOCAL_USER_GUIDE.md",
+      "destination": "docs/LOCAL_USER_GUIDE.md",
+      "source_sha256": "3156d9425cfb6783f9babc9ffe593b950bd07f6484707dd29eb526e2210552fb"
+    },
+    {
+      "source": "tests/test_agent_interaction.py",
+      "destination": "tests/test_agent_interaction.py",
+      "source_sha256": "43233c43c71024f46eff7c5b064b1ceb1865eac3ff411b897650d605880a038d"
+    },
+    {
+      "source": "tests/test_build_backend.py",
+      "destination": "tests/test_build_backend.py",
+      "source_sha256": "6fcb40258d40d056f602b6eea687e9f605e2e801cf4696c22e4ae5a6db775ba9"
+    },
+    {
+      "source": "tests/test_complete_mode.py",
+      "destination": "tests/test_complete_mode.py",
+      "source_sha256": "6a0122ef78d81a66642c6eda34cfaa8ee131d993b0ce51f264c99a63074bec59"
+    },
+    {
+      "source": "tests/test_content_validation.py",
+      "destination": "tests/test_content_validation.py",
+      "source_sha256": "ea9ef8a58919431df346d22a1fdf057a825f5ef1cdf0d857a9d764ecd74c0378"
+    },
+    {
+      "source": "tests/test_delivery_copy.py",
+      "destination": "tests/test_delivery_copy.py",
+      "source_sha256": "056df0e54dd1c6bf61d8a1db4cc5dbf85d69c0b0cb005685252fc6ea30ec2d1e"
+    },
+    {
+      "source": "tests/test_directory_settings.py",
+      "destination": "tests/test_directory_settings.py",
+      "source_sha256": "9293d9d7cc91a1046c0f537bfc54aebd7b40c25003042fd61ba5b56ba12a42e5"
+    },
+    {
+      "source": "tests/test_exporter_contract.py",
+      "destination": "tests/test_exporter_contract.py",
+      "source_sha256": "403639dc0918776f2b19bf180385e57ea9808e6e2b9ddd9408a0eb9305b84661"
+    },
+    {
+      "source": "tests/test_handoff_workspace.py",
+      "destination": "tests/test_handoff_workspace.py",
+      "source_sha256": "975d3dba43be593dfb6d026991df22d7ecd8849f4e973b9ab29c2481b74286b3"
+    },
+    {
+      "source": "tests/test_html_export.py",
+      "destination": "tests/test_html_export.py",
+      "source_sha256": "94eece4f8136d5ea9c1164dd9d7c976f8fa5490b09d448dc2db1e85c20c159cc"
+    },
+    {
+      "source": "tests/test_html_request_policy.py",
+      "destination": "tests/test_html_request_policy.py",
+      "source_sha256": "b5c6f867fe5fcf13f8c9127839e48b4569134d2da05ac5f6a3b5d8a83c49b3ba"
+    },
+    {
+      "source": "tests/test_importers_package.py",
+      "destination": "tests/test_importers_package.py",
+      "source_sha256": "251af240c4c9efad9545575c622dbe0ef23ab1d49536a650aea8965d67bd2395"
+    },
+    {
+      "source": "tests/test_local_agent_workflow.py",
+      "destination": "tests/test_local_agent_workflow.py",
+      "source_sha256": "53eb01ff9a5e554f61d61370928f441e66ba533a9edcf56ec5025aa36de23f59"
+    },
+    {
+      "source": "tests/test_local_asset_input.py",
+      "destination": "tests/test_local_asset_input.py",
+      "source_sha256": "8fdf2474c8667788d1e15398d6399b16432bc6e502082f390d5e8266eb4e5a7b"
+    },
+    {
+      "source": "tests/test_local_editorial.py",
+      "destination": "tests/test_local_editorial.py",
+      "source_sha256": "59ee2be8c88c4ece0e7b9d73fa09e8bf4390e701c90c7d4cb5b1f8a526a3eaff"
+    },
+    {
+      "source": "tests/test_local_teaching_validation.py",
+      "destination": "tests/test_local_teaching_validation.py",
+      "source_sha256": "7becd3668b4cf680558b100c984b8b10b2dff7b18d790cbff334dab0fee0db85"
+    },
+    {
+      "source": "tests/test_math_rendering.py",
+      "destination": "tests/test_math_rendering.py",
+      "source_sha256": "180e205457e2b3c6a093e3e1a70766a5238b7ce68fa4308ae6e8da99db388671"
+    },
+    {
+      "source": "tests/test_media_asr_alignment.py",
+      "destination": "tests/test_media_asr_alignment.py",
+      "source_sha256": "1c645c305cb2ea2f8fd8c5aac5dc86c78a0648340e2cde60e272c81b97d0c8b5"
+    },
+    {
+      "source": "tests/test_note_revision.py",
+      "destination": "tests/test_note_revision.py",
+      "source_sha256": "93618ab72c50fe3bcde7cda8566a72e8da9aa172760bd8ba0d864484e5bcdff7"
+    },
+    {
+      "source": "tests/test_note_structure_regressions.py",
+      "destination": "tests/test_note_structure_regressions.py",
+      "source_sha256": "62d920136790b45c3d80d4ef9c2d5d6006f968e6e76522c8317a5f3b080e94ac"
+    },
+    {
+      "source": "tests/test_numeric_review.py",
+      "destination": "tests/test_numeric_review.py",
+      "source_sha256": "7de608afccd70fed165a4c6a979e6e4e91c90261f78e63e621af23721f7a4b4b"
+    },
+    {
+      "source": "tests/test_output_organization.py",
+      "destination": "tests/test_output_organization.py",
+      "source_sha256": "50d86a86b303706afa4e040fe516f6a11ebd90702d71f7ae4f87b9e9a6814e4a"
+    },
+    {
+      "source": "tests/test_output_refs.py",
+      "destination": "tests/test_output_refs.py",
+      "source_sha256": "74a540005f33de4502ad4930ba691ad96199e3ed5022637941bc62bf5a6da917"
+    },
+    {
+      "source": "tests/test_platform_compat.py",
+      "destination": "tests/test_platform_compat.py",
+      "source_sha256": "0fe9aa415ac6595ae1d44e8746d09654ebb79f7ac4c176f70f7cd4528da052d2"
+    },
+    {
+      "source": "tests/test_product_surface.py",
+      "destination": "tests/test_product_surface.py",
+      "source_sha256": "00817e37e7fadc1bd5613f08fdd8cae734083d3725c9b8685b51193503cb7a56"
+    },
+    {
+      "source": "tests/test_setup_handouter.py",
+      "destination": "tests/test_setup_handouter.py",
+      "source_sha256": "14398264b0f1494193b7d9afa26306698c1083d6ccf9bb7f7ff5aac90ab0f615"
+    },
+    {
+      "source": "tests/test_slide_import.py",
+      "destination": "tests/test_slide_import.py",
+      "source_sha256": "b452d29a45ab0c558269586049850b7eda37873f9c8b6beaef311b4c6a73e3ed"
+    },
+    {
+      "source": "tests/test_slide_visual_policy.py",
+      "destination": "tests/test_slide_visual_policy.py",
+      "source_sha256": "76feaa03ed46a32bfa2bde0c4dea33d5204f944a2a8b11ed12fed4d7f6ceed20"
+    },
+    {
+      "source": "tests/test_source_refs.py",
+      "destination": "tests/test_source_refs.py",
+      "source_sha256": "e58ca203931ee87991df61d1a73ce5ceb8e3cfe53ca036cceea9d89c67ea4828"
+    },
+    {
+      "source": "tests/test_task_workflow.py",
+      "destination": "tests/test_task_workflow.py",
+      "source_sha256": "783b035a5a2c6283dfce739e5fd7bd0ca976c09f937dfda18007a4a9cb867268"
+    },
+    {
+      "source": "tests/test_tui_directories.py",
+      "destination": "tests/test_tui_directories.py",
+      "source_sha256": "da73ffde10b55b19bc5c2956c917e650acc60268c62415ab4f98bbc0585f8173"
+    },
+    {
+      "source": "tests/test_tui_workflow.py",
+      "destination": "tests/test_tui_workflow.py",
+      "source_sha256": "6f3df134eea83ba614cab7b451f394ff1da318cf0d4997f219c43b642f2cabb1"
+    },
+    {
+      "source": "tests/test_typora_export.py",
+      "destination": "tests/test_typora_export.py",
+      "source_sha256": "21786448ab230e6ab48db141ea0d828f883a3d5585a05a2395a86be13e736e98"
+    },
+    {
+      "source": "tests/test_typora_math.py",
+      "destination": "tests/test_typora_math.py",
+      "source_sha256": "0fb06429b46b5090058eebf946afdb3c6e772a2f5115b0ad7d5297602f5fbb63"
+    },
+    {
+      "source": "tests/test_web_handoff.py",
+      "destination": "tests/test_web_handoff.py",
+      "source_sha256": "adbca7a82ca0405e921052be4e158856d5aaf8d1c285fa0489026e7746cddfb4"
+    },
+    {
+      "source": "tests/_gates.py",
+      "destination": "tests/_gates.py",
+      "source_sha256": "66dbab7db2952d51f340d38240a91edf08a98a3d92b91085ac2d0b22c88f84ba"
+    },
+    {
+      "source": "src/handouter_local/sensevoice_normalize.py",
+      "destination": "src/handouter/sensevoice_normalize.py",
+      "source_sha256": "9e8846ca150913a91cd8af498a699db6ff06fdefb890725f4adb93ffd8e1a5de"
+    },
+    {
+      "source": "docs/LOCAL_ASSET_INPUT.md",
+      "destination": "docs/LOCAL_ASSET_INPUT.md",
+      "source_sha256": "1e99d0b07b6b363dded7f69144d57f5ea7f77d080733b852b487f6577de0b8d1"
+    }
+  ]
+}
