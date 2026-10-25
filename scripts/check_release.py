@@ -13,11 +13,11 @@ ROOT = Path(__file__).resolve().parents[1]
 CORE = (
     'test_build_backend', 'test_tui_workflow', 'test_tui_directories',
     'test_local_asset_input', 'test_media_asr_alignment', 'test_setup_handouter',
-    'test_local_agent_workflow', 'test_local_editorial', 'test_split_distribution',
+    'test_local_agent_workflow', 'test_local_editorial', 'test_split_distribution', 'test_external_collection',
 )
 FULL = CORE + ('test_handoff_workspace', 'test_agent_interaction',
     'test_task_workflow', 'test_delivery_copy', 'test_html_export',
-    'test_platform_compat', 'test_exporter_contract', 'test_importers_package')
+    'test_platform_compat', 'test_importers_package')
 
 
 def run_regressions(profile, exhaustive=False):
@@ -32,7 +32,8 @@ def run_regressions(profile, exhaustive=False):
     allowed = {WINDOWS_REASON, MACOS_REASON, POSIX_REASON, EVAL_REASON,
                'Windows x64 native required', 'requires real Windows Job Objects',
                'POSIX process-group integration', 'macOS Bash bootstrap integration',
-               'symlinks unavailable', 'FIFO unavailable'}
+               'symlinks unavailable', 'FIFO unavailable',
+               'POSIX executable fixture; native Windows containment has its own tests'}
     if profile == 'core': allowed.add(SLOW_REASON)
     skips = [{'test': t.id(), 'reason': r, 'allowed': r in allowed} for t, r in result.skipped]
     summary = {'profile': profile, 'system': platform.system(), 'python': platform.python_version(),

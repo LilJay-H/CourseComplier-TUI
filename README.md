@@ -1,6 +1,6 @@
 # Course Compiler TUI
 
-独立的本地 CLI/TUI：接收现有插件导出的 PPT/link 资产 ZIP、本地音视频或转写，下载、转写、整理工作区，再交给用户自己安装并登录的 Codex / Claude CLI 执行 Workflow，生成 Markdown 与离线 HTML。
+独立的本地 CLI/TUI：接收本地音视频、转写和标准资源 ZIP；浏览器导出 ZIP 经独立安装的采集插件确认媒体域名后在本机下载，再转写、整理工作区，再交给用户自己安装并登录的 Codex / Claude CLI 执行 Workflow，生成 Markdown 与离线 HTML。
 
 保留 Complete / Deep / Full / Summary / Verbatim、手动交接、已有讲义续作和结构校验。本仓库包含本地 Workflow 必需规则；不包含 GUI、Server、团队高精度 Agent 服务、云客户端或团队 token。
 
@@ -33,6 +33,10 @@ python setup_handouter.py --start
 
 TUI 沿用 **FunASR + Torch 的 SenseVoiceSmall / FSMN-VAD**，支持 CPU 和可用的 MPS/CUDA。GUI 的 GGUF F16 组件体系不在本仓库；没有将两种模型格式混用。包的 Python 范围不代表所有 ASR 原生依赖在每个平台都有可用 wheel。
 
+## 浏览器导出 ZIP 与采集插件
+
+智云采集器及脚本已迁至 [独立插件仓库](https://github.com/Silhouette-my/zhiyun-collector)，不随 TUI 安装包分发。先按[外部采集器指南](docs/EXTERNAL_COLLECTOR.md)安装、核对身份并配置。TUI 显示域名，用户确认后才下载；标准 ZIP、TXT、音视频不需要插件。
+
 ## 用户自己的 Agent
 
 先自行安装并登录 `codex` 或 `claude`，确保在当前终端 PATH 可见，且能够单独正常工作。
@@ -54,7 +58,7 @@ TUI 沿用 **FunASR + Torch 的 SenseVoiceSmall / FSMN-VAD**，支持 CPU 和可
 .\.venv\Scripts\python.exe -c "import handouter_build as b; print(b.build_wheel('dist')); print(b.build_sdist('dist'))"
 ```
 
-`core` 是较小开发门禁，测试前还需 Node.js（检查既有导出脚本）和 PATH 中的 FFmpeg/ffprobe。`full` 包含本地输入、媒体/模拟 ASR、交接、续作、成品和 Windows 进程相关路径；全部保留测试用 `--exhaustive`，不包含云测试。构建源码白名单为 `release-files.json`，增加发行文件时同步更新。wheel 安装后可在任意目录运行，不要求原仓库存在。
+`core` 是较小开发门禁，测试前需要 PATH 中的 FFmpeg/ffprobe；浏览器脚本测试在独立插件仓库运行。`full` 包含本地输入、媒体/模拟 ASR、交接、续作、成品和 Windows 进程相关路径；全部保留测试用 `--exhaustive`，不包含云测试。构建源码白名单为 `release-files.json`，增加发行文件时同步更新。wheel 安装后可在任意目录运行，不要求原仓库存在。
 
 从任意目录安装构建物（路径按实际位置调整）：
 

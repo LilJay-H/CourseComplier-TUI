@@ -768,5 +768,15 @@
       "destination": "docs/LOCAL_ASSET_INPUT.md",
       "source_sha256": "1e99d0b07b6b363dded7f69144d57f5ea7f77d080733b852b487f6577de0b8d1"
     }
-  ]
+  ],
+  "migration": {
+    "source_repository": "https://github.com/LilJay-H/CourseComplier",
+    "source_commit": "0a21e87",
+    "description": "External collector host, CLI/TUI wiring, offline assets validation and synthetic tests, selectively merged preserving standalone Windows fixes. contract.py retains only the required LocalError type. Original extraction files below are historical records, not the current distribution inventory; release-files.json is authoritative.",
+    "external_plugin": "https://github.com/Silhouette-my/zhiyun-collector",
+    "removed_from_distribution": [
+      "zhiyun_exporter.user.js",
+      "tests/test_exporter_contract.py"
+    ]
+  }
 }

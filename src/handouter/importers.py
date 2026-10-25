@@ -17,7 +17,6 @@ MAX_ZIP_MEMBERS = 10_000
 MAX_ZIP_BYTES = 512 * 1024 * 1024
 MAX_IMAGE_BYTES = 32 * 1024 * 1024
 MAX_METADATA_BYTES = 8 * 1024 * 1024
-MAX_PRIVATE_SOURCE_BYTES = 1024 * 1024
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
 LOCAL_AUDIO_SUFFIXES = {".aac", ".flac", ".m4a", ".mp3", ".ogg", ".opus", ".wav"}
 LOCAL_MEDIA_SUFFIXES = {".avi", ".m2ts", ".m4v", ".mkv", ".mov", ".mp4", ".mpeg", ".mpg", ".mts", ".ts", ".webm"}
@@ -328,43 +327,6 @@ def _safe_timing_diagnostics(item: dict) -> dict:
     if isinstance(raw, bool) or not isinstance(raw, (str, int, float, type(None))):
         raw = None
     return {"time_status": status, "source_time_field": field, "raw_time_value": raw}
-
-
-def read_private_media_source(zip_path: str | Path) -> str:
-    """Read the browser export's private media URL without extracting or persisting it."""
-    source_zip = Path(zip_path)
-    if not source_zip.is_file() or source_zip.is_symlink():
-        raise FileNotFoundError(f"ZIP 不存在或不是普通文件: {source_zip}")
-    with zipfile.ZipFile(source_zip, "r") as archive:
-        candidates = [info for info in archive.infolist() if info.filename == "private/source.json"]
-        if len(candidates) == 1:
-            info = candidates[0]
-            label = "private/source.json"
-        else:
-            # 兼容旧版导出器直接存放在 course_info.json 的视频地址
-            legacy = [item for item in archive.infolist() if item.filename == "course_info.json"]
-            if len(legacy) == 1:
-                info = legacy[0]
-                label = "course_info.json"
-            else:
-                raise ValueError("资产 ZIP 缺少唯一的 private/source.json；请重新从新版浏览器导出器打包")
-        if info.file_size > MAX_PRIVATE_SOURCE_BYTES or info.flag_bits & 1 or stat.S_ISLNK(info.external_attr >> 16):
-            raise ValueError(f"{label} 不安全或超过大小限制")
-        with archive.open(info) as handle:
-            raw = handle.read(MAX_PRIVATE_SOURCE_BYTES + 1)
-        if len(raw) > MAX_PRIVATE_SOURCE_BYTES:
-            raise ValueError(f"{label} 超过大小限制")
-        try:
-            payload = json.loads(raw.decode("utf-8-sig"))
-        except (UnicodeError, ValueError) as exc:
-            raise ValueError(f"{label} 不是有效 UTF-8 JSON") from exc
-        url = payload.get("videoUrl") if isinstance(payload, dict) else None
-        if not isinstance(url, str) or not re.match(r"^https?://", url.strip(), re.I):
-            raise ValueError(f"{label} 中没有有效 HTTP(S) 视频地址")
-        clean_url = url.strip()
-        if "95c332f44fd741f5ac6d1643252dd9f2" in clean_url:
-            raise ValueError("资产包中的视频地址为智云初始的 3 秒空白占位视频，缺少实际课堂录像；请在回放页面点击播放视频后重新打包导出")
-        return clean_url
 
 
 def import_slides_zip(zip_path: str | Path, output_dir: str | Path) -> list[dict]:

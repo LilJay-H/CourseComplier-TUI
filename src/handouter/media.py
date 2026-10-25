@@ -119,7 +119,7 @@ def extract_audio(
     source: str | Path,
     output: str | Path,
     *,
-    referer: str | None = "https://interactivemeta.cmc.zju.edu.cn/",
+    referer: str | None = None,
 ) -> AudioExtractResult:
     """Extract audio to a NEW path.
 

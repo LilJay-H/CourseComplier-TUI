@@ -289,6 +289,7 @@ def terminate_process_tree(
     *,
     grace_seconds: float = 3.0,
     platform_name: str | None = None,
+    cleanup_errors: list[BaseException] | None = None,
 ) -> threading.Thread | None:
     """Request cancellation; callers join the returned cleanup thread.
 
@@ -298,11 +299,14 @@ def terminate_process_tree(
     if is_windows(platform_name) and process.poll() is not None:
         return
     _request_termination(process, platform_name)
-    cleanup = threading.Thread(
-        target=_force_termination,
-        kwargs={"process": process, "grace_seconds": grace_seconds, "platform_name": platform_name},
-        daemon=False,
-    )
+    def force():
+        try:
+            _force_termination(process, grace_seconds=grace_seconds, platform_name=platform_name)
+        except BaseException as exc:
+            if cleanup_errors is None:
+                raise
+            cleanup_errors.append(exc)
+    cleanup = threading.Thread(target=force, daemon=False)
     cleanup.start()
     return cleanup
 
@@ -313,6 +317,12 @@ if __name__ == "__main__":
     except (OSError, ValueError, RuntimeError) as exc:
         print(f"course-compiler: error: cannot establish task process containment: {exc}", file=sys.stderr)
         raise SystemExit(2)
+    if len(sys.argv) == 3 and sys.argv[1] == "--external-collector":
+        # The parent verifies this explicit path and its publisher-pinned digest.
+        # This bootstrap joins its Windows Job before starting any descendants.
+        environment = {key: value for key, value in os.environ.items() if key not in {"PYTHONPATH", "PYTHONHOME"}}
+        child = subprocess.Popen([sys.argv[2], "protocol"], env=environment)
+        raise SystemExit(child.wait())
     from .cli import main
 
     raise SystemExit(main())

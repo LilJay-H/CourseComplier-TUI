@@ -94,7 +94,8 @@ class LocalAssetInputTests(unittest.TestCase):
     def test_manifest_identity_and_tui_direct_audio_mapping(self):
         archive = self.package({"schema_version": 1, "lecture": {"course_title": "Course"},
             "transcript": {"path": "text.txt"}}, {"text.txt": "text"})
-        identity = inspect_input_source(archive)
+        with patch("handouter.external_collector.inspect_browser_export", side_effect=AssertionError("standard package requires no plugin")):
+            identity = inspect_input_source(archive)
         self.assertEqual(identity.source_kind, "local_asset_package")
         self.assertEqual(identity.course_title, "Course")
         audio = self.root / "lesson.mp3"
@@ -113,7 +114,9 @@ class LocalAssetInputTests(unittest.TestCase):
             output.writestr("nested/handouter-input.json", json.dumps({"schema_version": 1}))
             output.writestr("course_info.json", json.dumps({"courseName": "Zhiyun compatible"}))
             output.writestr("private/source.json", json.dumps({"pageUrl": "https://example.invalid/?course_id=1&sub_id=2"}))
-        identity = inspect_input_source(archive)
+        with patch("handouter.external_collector.inspect_browser_export", return_value={
+                "course_title": "External compatible", "lecture_date": None, "source_sha256": "a" * 64}):
+            identity = inspect_input_source(archive)
         self.assertEqual(identity.source_kind, "zhiyun_asset_zip")
 
     def test_cli_run_accepts_direct_transcript_without_asr(self):

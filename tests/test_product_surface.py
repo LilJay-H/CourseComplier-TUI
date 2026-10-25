@@ -55,11 +55,14 @@ class ProductDirectoryTests(unittest.TestCase):
         self.assertEqual(resolve_asset_zip(self.input, "b.zip"), selected.resolve())
         self.assertEqual({p.name for p in discover_asset_zips(self.input)}, {"a.zip", "b.zip"})
 
-    def test_asset_identity_uses_safe_course_info_and_page_ids(self):
+    def test_asset_identity_uses_only_safe_external_plugin_fields(self):
         asset = self.make_zip("identified.zip", identified=True)
-        identity = inspect_asset_zip(asset)
+        with patch("handouter.external_collector.inspect_browser_export", return_value={
+                "course_title": "自动识别课程", "lecture_date": None, "source_sha256": "a" * 64,
+                "source_id": "opaque-course-lecture"}):
+            identity = inspect_asset_zip(asset)
         self.assertEqual(identity.course_title, "自动识别课程")
-        self.assertEqual(identity.lecture_id, "zhiyun-112-85721-1965580")
+        self.assertEqual(identity.lecture_id, "opaque-course-lecture")
         self.assertNotIn("SECRET", identity.lecture_id)
 
     def test_absolute_asset_does_not_require_input_directory(self):

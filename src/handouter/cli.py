@@ -109,6 +109,14 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
+    collector = sub.add_parser("collector-configure", help="注册独立采集插件；不从材料包安装或运行程序")
+    collector.add_argument("--executable", required=True, help="明确安装的采集插件绝对路径")
+    collector.add_argument("--sha256", required=True, help="可信发布渠道提供的可执行文件 SHA-256")
+    collector.add_argument("--tool-id", required=True, help="可信发布渠道提供的工具身份")
+    collector.add_argument("--exporter-script", help="可选：该插件单独提供的浏览器脚本路径")
+    collector_inspect = sub.add_parser("collector-inspect", help="用已配置插件只预检浏览器 ZIP；不下载")
+    collector_inspect.add_argument("source")
+
     run = sub.add_parser("run", help="面向普通用户：站点资产 ZIP 或本地音频/媒体/转写 -> 标准工作区与讲义")
     run.add_argument("--input-dir", default=None, help="扫描 ZIP 的目录；默认保存设置或桌面 Handouter/输入")
     run.add_argument("--output-dir", default=None, help="输出根目录；默认保存设置或桌面 Handouter/输出")
@@ -139,6 +147,9 @@ def _build_parser() -> argparse.ArgumentParser:
     run.add_argument('--new-version', action='store_true', help='已有相同材料任务显式刷新 Prompt，再创建新版本')
     _agent_args(run, default="none")
     _asr_args(run)
+    run.add_argument("--allowed-media-host", action="append", default=[], help="本次已确认的精确媒体域名；只适用于浏览器 ZIP，可重复")
+    run.add_argument("--collector-source-sha256", help=argparse.SUPPRESS)
+    run.add_argument("--collector-binding", help=argparse.SUPPRESS)
 
     prepare = sub.add_parser("prepare", help="高级入口：已有转写/PPT -> 标准工作区 -> Agent 交接包")
     _lecture_args(prepare, transcript=True)
@@ -154,9 +165,12 @@ def _build_parser() -> argparse.ArgumentParser:
     _asr_args(media)
 
     asset = sub.add_parser("build-asset", help="新版浏览器资产 ZIP -> 音频/PPT/ASR -> Agent 交接包")
-    asset.add_argument("asset_zip", help="zhiyun_exporter.user.js v1.4+ 导出的私有资产 ZIP")
+    asset.add_argument("asset_zip", help="已配置外部采集插件支持的浏览器导出 ZIP")
     _lecture_args(asset, transcript=False)
     _asr_args(asset)
+    asset.add_argument("--allowed-media-host", action="append", default=[], help="预检后明确确认的精确媒体域名，可重复")
+    asset.add_argument("--collector-source-sha256", help=argparse.SUPPRESS)
+    asset.add_argument("--collector-binding", help=argparse.SUPPRESS)
 
     extract = sub.add_parser("extract-audio", help="只抽取音频；新文件写入并验证，不上传云端")
     extract.add_argument("source", help="本地媒体或授权 HTTP(S) 地址")
@@ -467,7 +481,10 @@ def _run_product(args: argparse.Namespace) -> int:
     asr = dict(device=args.device, language=args.language, model_path=args.model_path, progress=_progress_event)
     slides = dict(slides_dir=args.slides_dir, slides_meta=args.slides_meta, slides_zip=args.slides_zip)
     if actual_kind == "zhiyun_asset_zip":
-        result = build_from_asset_zip(args.output_dir, asset_zip=source, **common, **asr)
+        result = build_from_asset_zip(args.output_dir, asset_zip=source,
+            allowed_media_hosts=args.allowed_media_host, collector_source_sha256=args.collector_source_sha256,
+            collector_binding=args.collector_binding,
+            **common, **asr)
     elif actual_kind == "local_asset_package":
         result = build_from_local_asset_zip(args.output_dir, asset_zip=source, **common, **asr)
     elif actual_kind == "local_audio":
@@ -591,6 +608,9 @@ def _build_asset(args: argparse.Namespace) -> int:
         lecture_id=args.lecture_id,
         course_title=course_title,
         asset_zip=args.asset_zip,
+        allowed_media_hosts=args.allowed_media_host,
+        collector_source_sha256=args.collector_source_sha256,
+        collector_binding=args.collector_binding,
         mode=args.mode,
         modes=_selected_modes(args),
         use_slides_as_source=args.use_slides,
@@ -605,7 +625,8 @@ def _build_asset(args: argparse.Namespace) -> int:
         lecture_date=args.lecture_date or (inspect_asset_zip(args.asset_zip).lecture_date if not args.legacy_layout else None),
         course_aliases=aliases, folder_name_mode=folder_mode,
     )
-    print(json.dumps(_build_payload(result), ensure_ascii=False, indent=2))
+    payload = _build_payload(result) if isinstance(result, BuildResult) else _prepare_payload(result)
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -889,6 +910,15 @@ def main(argv: list[str] | None = None) -> int:
         from .settings import (load_directory_settings, save_directory_settings, save_course_preferences,
                                configured_course_output, resolve_output_directory, resolve_course_title,
                                aliases_for_course, course_folder_mode)
+        if args.command == "collector-configure":
+            from .external_collector import configure
+            result = configure(args.executable, args.sha256, args.tool_id, args.exporter_script)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0
+        if args.command == "collector-inspect":
+            from .external_collector import inspect_browser_export
+            print(json.dumps(inspect_browser_export(args.source), ensure_ascii=False, indent=2))
+            return 0
         if args.command == 'directories':
             course_action = bool(args.course_output_dir or args.clear_course_output or args.course_alias
                                  or args.clear_course_aliases or args.course_folder_name)

@@ -14,7 +14,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from handouter.importers import import_slides_zip, read_private_media_source
+from handouter.importers import import_slides_zip
 from handouter.service import BuildResult, build_from_asset_zip, prepare_lecture
 
 PNG = base64.b64decode(
@@ -57,26 +57,25 @@ class PackageImporterTests(unittest.TestCase):
         text = (out / "slides_meta.json").read_text()
         self.assertNotIn("SECRET", text)
 
-    def test_private_media_source_is_read_only_in_memory(self):
-        self.make_exporter_zip()
-        url = read_private_media_source(self.archive)
-        self.assertIn("auth_key=SECRET", url)
-
-    def test_build_asset_passes_private_url_to_media_pipeline_without_expanding_it(self):
+    def test_build_asset_passes_only_checked_standard_package_to_local_pipeline(self):
         self.make_exporter_zip()
         sentinel = object()
-        with patch("handouter.service.build_from_media", return_value=sentinel) as build:
+        with patch("handouter.external_collector.inspect_browser_export", return_value={
+                "source_sha256": "a" * 64, "collector_binding": "b" * 64}), \
+                patch("handouter.external_collector.convert_browser_export") as collect, \
+                patch("handouter.service.build_from_local_asset_zip", return_value=sentinel) as build:
             result = build_from_asset_zip(
                 self.root / "workspace",
                 lecture_id="a-01",
                 course_title="A",
                 asset_zip=self.archive,
+                allowed_media_hosts=["media.example.test"],
             )
         self.assertIs(result, sentinel)
         kwargs = build.call_args.kwargs
-        self.assertIn("auth_key=SECRET", kwargs["media_source"])
-        self.assertEqual(Path(kwargs["slides_zip"]), self.archive)
-        self.assertEqual(kwargs["source_type"], "zhiyun_asset_zip")
+        self.assertNotIn("media_source", kwargs)
+        self.assertNotEqual(Path(kwargs["asset_zip"]), self.archive)
+        self.assertEqual(collect.call_args.kwargs["allowed_media_hosts"], ["media.example.test"])
 
     def test_prepare_can_consume_exporter_zip_directly(self):
         self.make_exporter_zip()

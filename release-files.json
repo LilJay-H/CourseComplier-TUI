@@ -38,6 +38,7 @@
   "NOTICE.md",
   "PROJECT_STATUS.md",
   "README.md",
+  "docs/EXTERNAL_COLLECTOR.md",
   "docs/LOCAL_ASSET_INPUT.md",
   "docs/LOCAL_EDITORIAL_FLOW.md",
   "docs/LOCAL_USER_GUIDE.md",
@@ -88,6 +89,7 @@
   "src/handouter/doctor.py",
   "src/handouter/editorial_context.py",
   "src/handouter/editorial_review.py",
+  "src/handouter/external_collector.py",
   "src/handouter/handoff.py",
   "src/handouter/html_core.py",
   "src/handouter/html_export.py",
@@ -124,6 +126,9 @@
   "src/handouter/validation.py",
   "src/handouter/web_text.py",
   "src/handouter/workspace.py",
+  "src/handouter_local/__init__.py",
+  "src/handouter_local/assets.py",
+  "src/handouter_local/contract.py",
   "start-course-compiler.cmd",
   "start-course-compiler.command",
   "start-handouter.cmd",
@@ -135,7 +140,7 @@
   "tests/test_content_validation.py",
   "tests/test_delivery_copy.py",
   "tests/test_directory_settings.py",
-  "tests/test_exporter_contract.py",
+  "tests/test_external_collection.py",
   "tests/test_handoff_workspace.py",
   "tests/test_html_export.py",
   "tests/test_html_request_policy.py",
@@ -163,6 +168,5 @@
   "tests/test_tui_workflow.py",
   "tests/test_typora_export.py",
   "tests/test_typora_math.py",
-  "tests/test_web_handoff.py",
-  "zhiyun_exporter.user.js"
+  "tests/test_web_handoff.py"
 ]

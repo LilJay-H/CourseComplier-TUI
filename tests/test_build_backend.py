@@ -36,7 +36,9 @@ class BuildBackendTests(unittest.TestCase):
                     for path in skill_root.rglob("*.md")}
         expected.update({"handouter/" + path.relative_to(ROOT / "src/handouter").as_posix(): path
                          for path in (ROOT / "src/handouter").rglob("*.py") if "__pycache__" not in path.parts})
-        expected["handouter/assets/zhiyun_exporter.user.js"] = ROOT / "zhiyun_exporter.user.js"
+        expected.update({"handouter_local/" + path.name: path
+                         for path in (ROOT / "src/handouter_local").glob("*.py")})
+        self.assertFalse(any(name.endswith('.user.js') for name in self.names))
         for member, path in expected.items():
             with self.subTest(member=member):
                 self.assertEqual(self.archive.read(member), path.read_bytes())

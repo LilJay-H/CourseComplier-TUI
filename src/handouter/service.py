@@ -19,7 +19,7 @@ def _progress(callback: ProgressCallback | None, stage: str, percent: int, detai
 
 from .asr import ASRResult, transcribe_sensevoice
 from .handoff import HandoffSummary, create_handoff
-from .importers import import_local_asset_zip, import_slides_zip, read_private_media_source
+from .importers import import_local_asset_zip, import_slides_zip
 from .media import AudioExtractResult, extract_audio
 from .validation import ValidationReport, validate_workspace
 from .workspace import WorkspaceSummary, create_workspace, read_json, validate_lecture_id
@@ -351,32 +351,25 @@ def build_from_asset_zip(
     progress: ProgressCallback | None = None,
     output_organization: dict | None = None,
     cache_root: Path | None = None,
-) -> BuildResult:
-    """Browser asset ZIP -> private signed media URL in memory -> full local preparation."""
-    _progress(progress, "读取课程资产", 0, "正在读取 ZIP 元数据")
-    media_source = read_private_media_source(asset_zip)
-    _progress(progress, "读取课程资产", 100, "完成")
-    return build_from_media(
-        workspace_root,
-        lecture_id=lecture_id,
-        course_title=course_title,
-        media_source=media_source,
-        slides_zip=asset_zip,
-        mode=mode,
-        modes=modes,
-        use_slides_as_source=use_slides_as_source,
-        embed_slides=embed_slides,
-        allow_web=allow_web,
-        format_profile=format_profile,
-        skill_path=skill_path,
-        device=device,
-        language=language,
-        model_path=model_path,
-        source_type="zhiyun_asset_zip",
-        progress=progress,
-        output_organization=output_organization,
-        cache_root=cache_root,
-    )
+    allowed_media_hosts: list[str] | None = None,
+    collector_source_sha256: str | None = None,
+    collector_binding: str | None = None,
+) -> PrepareResult | BuildResult:
+    """External collection -> complete standard-package check -> local preparation."""
+    from .external_collector import convert_browser_export, inspect_browser_export
+    details = inspect_browser_export(asset_zip)
+    with tempfile.TemporaryDirectory(prefix="handouter-collection-") as temporary:
+        standard = Path(temporary) / "standard.zip"
+        checked = convert_browser_export(asset_zip, standard, allowed_media_hosts=allowed_media_hosts or [],
+            expected_source_sha256=collector_source_sha256 or details["source_sha256"],
+            expected_collector_binding=collector_binding or details["collector_binding"], progress=progress)
+        return build_from_local_asset_zip(workspace_root, lecture_id=lecture_id,
+            course_title=course_title, asset_zip=standard, mode=mode, modes=modes,
+            use_slides_as_source=use_slides_as_source, embed_slides=embed_slides,
+            allow_web=allow_web, format_profile=format_profile, skill_path=skill_path,
+            device=device, language=language, model_path=model_path, progress=progress,
+            output_organization=output_organization, cache_root=cache_root, checked_asset=checked,
+            input_fingerprint=details.get("source_fingerprint") or details["source_sha256"])
 
 
 def build_from_local_asset_zip(
@@ -398,15 +391,29 @@ def build_from_local_asset_zip(
     progress: ProgressCallback | None = None,
     organized: bool = False,
     lecture_date: str | None = None,
+    cache_root: Path | None = None,
+    output_organization: dict | None = None,
     course_aliases: tuple[str, ...] = (),
     folder_name_mode: str = 'always',
-    cache_root: Path | None = None,
+    checked_asset=None,
+    input_fingerprint: str | None = None,
 ) -> PrepareResult | BuildResult:
     """Site-neutral local asset ZIP -> existing preparation/ASR pipelines."""
     from .stage_cache import asset_fingerprint
-    identity = asset_fingerprint(asset_zip)
+    identity = input_fingerprint or asset_fingerprint(asset_zip)
     with tempfile.TemporaryDirectory(prefix="handouter-local-assets-") as temporary:
-        package = import_local_asset_zip(asset_zip, Path(temporary) / "input")
+        if checked_asset is None:
+            package = import_local_asset_zip(asset_zip, Path(temporary) / "input")
+        else:
+            from handouter_local.assets import extract
+            from .importers import LocalAssetPackage
+            if checked_asset.source != Path(asset_zip).resolve():
+                raise ValueError("预检标准包与所选资源不匹配")
+            paths = extract(checked_asset, Path(temporary) / "input")
+            package = LocalAssetPackage(Path(temporary) / "input", checked_asset.course_title, None,
+                checked_asset.lecture_date, paths.get("transcript"), checked_asset.roles.get("transcript_origin"),
+                paths.get("segments_path"), paths.get("raw_asr_path"), paths.get("audio"), paths.get("media"),
+                paths.get("images_dir"), paths.get("metadata_path"))
         slides = package.slides_dir
         common = dict(lecture_id=lecture_id, course_title=course_title,
             slides_dir=slides, slides_meta=package.slides_meta,
@@ -415,6 +422,8 @@ def build_from_local_asset_zip(
             format_profile=format_profile, skill_path=skill_path,
             organized=organized, lecture_date=lecture_date,
             course_aliases=course_aliases, folder_name_mode=folder_name_mode)
+        if output_organization is not None:
+            common["output_organization"] = output_organization
         if package.transcript is not None:
             _progress(progress, "读取本地资产", 100, "使用包内转写；不重复运行 ASR")
             return prepare_lecture(workspace_root, transcript=package.transcript,

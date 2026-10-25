@@ -150,24 +150,15 @@ class TaskWorkflowTests(unittest.TestCase):
         self.assertTrue((self.workspace / 'notes/deep-001.md').is_file())
         self.assertEqual(json.loads((self.workspace / 'state.json').read_text())['agent_output']['status'], 'partial')
 
-    def test_asset_identity_ignores_signature_rotation_but_not_media_or_material_change(self):
+    def test_browser_asset_identity_is_provided_by_the_configured_plugin(self):
         from handouter.tasks import asset_fingerprint
-        def asset(name, url, content):
-            path = self.root / name
-            with zipfile.ZipFile(path, 'w') as archive:
-                archive.writestr('course_info.json', '{"courseName":"Synthetic"}')
-                archive.writestr('slides_meta.json', content)
-                archive.writestr('private/source.json', json.dumps({'videoUrl': url}))
-            return asset_fingerprint(path)
-        first = asset('a.zip', 'https://example.invalid/a?auth_key=SYNTHETIC_1', '[]')
-        rotated = asset('b.zip', 'https://example.invalid/a?auth_key=SYNTHETIC_2', '[]')
-        changed = asset('c.zip', 'https://example.invalid/b?auth_key=SYNTHETIC_2', '[]')
-        self.assertEqual(first, rotated)
-        self.assertNotEqual(first, changed)
-        self.assertNotEqual(first, asset('d.zip', 'https://example.invalid/a?auth_key=SYNTHETIC_2', '[1]'))
-        self.assertNotEqual(
-            asset('e.zip', 'https://example.invalid/video?id=1&auth_key=SYNTHETIC_1', '[]'),
-            asset('f.zip', 'https://example.invalid/video?id=2&auth_key=SYNTHETIC_2', '[]'))
+        path = self.root / 'browser.zip'
+        with zipfile.ZipFile(path, 'w') as archive:
+            archive.writestr('opaque.dat', 'browser data')
+        details = {'source_sha256': 'a' * 64, 'source_fingerprint': 'b' * 64}
+        with patch('handouter.external_collector.inspect_browser_export', return_value=details) as inspect:
+            self.assertEqual(asset_fingerprint(path), 'b' * 64)
+            inspect.assert_called_once_with(path)
 
     def test_config_input_change_requires_explicit_new_task(self):
         from handouter.tasks import plan_task
