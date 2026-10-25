@@ -20,4 +20,4 @@
 - 未调用真实 Codex/Claude 模型，登录、额度、CLI 上游兼容性及讲义语义质量待真实使用验证。没有团队云依赖。
 - macOS/Linux、其他 Python 版本、真实课程平台 CDN/签名链接均未实测。当前用户权限不能创建 symlink，因此对应实际文件系统用例未执行。
 - 本次 wheel/sdist 和 Windows 源码启动 ZIP 不附带 FFmpeg、模型或完整离线依赖。媒体测试复用了机器现有 FFmpeg/ffprobe；其他机器需按 README 准备。
-- 未设置新仓库远端、未推送/公开；没有新增许可证。GitHub 名称、可见性、公开授权/许可证和推送由用户另行决定。
+- 已按用户授权推送至 `LilJay-H/CourseComplier-TUI` 私有仓库，origin/main 已关联；已向 `Silhouette-my` 发出读写协作邀请，邀请发出时等待接受。尚未公开，没有新增许可证；公开授权和许可证仍需另行决定。
