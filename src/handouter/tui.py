@@ -150,6 +150,12 @@ def build_cli_args(cfg: dict[str, Any]) -> list[str]:
             args.append("--allow-web")
         args += ["--device", str(cfg.get("device") or "auto")]
         args += ["--agent", str(cfg.get("agent") or "manual")]
+        for host in cfg.get("allowed_media_hosts", []):
+            args += ["--allowed-media-host", host]
+        if cfg.get("collector_source_sha256"):
+            args += ["--collector-source-sha256", cfg["collector_source_sha256"]]
+        if cfg.get("collector_binding"):
+            args += ["--collector-binding", cfg["collector_binding"]]
         return args
 
     # Advanced compatibility path retained for tests/tools, but not exposed in
@@ -395,6 +401,9 @@ def _load_asset_into_state(state: dict[str, Any]) -> str:
     normalized = normalize_terminal_path(raw)
     asset = resolve_input_source(state.get('input_dir') or '.', normalized)
     state["asset"] = str(asset)
+    state.pop("allowed_media_hosts", None)
+    state.pop("collector_source_sha256", None)
+    state.pop("collector_binding", None)
     identity = inspect_input_source(asset)
     detected_kind = getattr(identity, "source_kind", "zhiyun_asset_zip")
     state["source_kind"] = detected_kind
@@ -417,6 +426,38 @@ def _load_asset_into_state(state: dict[str, Any]) -> str:
         state.pop('workspace', None)
     state['_identified_asset'] = str(asset)
     return f"Loaded: {asset.name}  |  {detected_kind}  |  course/id identified."
+
+
+def _confirm_collection(stdscr, state: dict[str, Any]) -> bool:
+    """Show the exact domains before launching a browser-export task."""
+    import curses
+    import textwrap
+    from .external_collector import inspect_browser_export
+    details = inspect_browser_export(state["asset"])
+    offset = 0
+    while True:
+        height, width = stdscr.getmaxyx()
+        rows = ["Download stays on this computer. Upload needs separate consent.", "", "Exact media domains:"]
+        for host in details["media_hosts"]:
+            rows.extend(textwrap.wrap(host, max(12, width - 6)))
+        stdscr.erase()
+        _safe_add(stdscr, 1, 2, " CONFIRM LOCAL COLLECTION ")
+        for index, row in enumerate(rows[offset:offset + max(1, height - 6)]):
+            _safe_add(stdscr, index + 3, 2, row)
+        _safe_add(stdscr, height - 2, 2, "Y: confirm domains and collect | N/Esc: cancel | Up/Down: scroll")
+        stdscr.refresh()
+        key = stdscr.getch()
+        if key in (ord("y"), ord("Y")):
+            state["allowed_media_hosts"] = list(details["media_hosts"])
+            state["collector_source_sha256"] = details["source_sha256"]
+            state["collector_binding"] = details["collector_binding"]
+            return True
+        if key in (ord("n"), ord("N"), 27):
+            return False
+        if key == curses.KEY_DOWN:
+            offset = min(max(0, len(rows) - max(1, height - 6)), offset + 1)
+        elif key == curses.KEY_UP:
+            offset = max(0, offset - 1)
 
 
 def _commit_text_value(state: dict[str, Any], field_key: str, value: str) -> str | None:
@@ -1293,6 +1334,16 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
                 if not state.get("lecture"):
                     status = "Lecture ID is required."
                     continue
+                if (field_key == "run" and not state.get("source_note")
+                        and (workspace is None or not workspace.is_dir())
+                        and state.get("source_kind") == "zhiyun_asset_zip"):
+                    try:
+                        if not _confirm_collection(stdscr, state):
+                            status = "Collection cancelled; original browser ZIP retained."
+                            continue
+                    except (OSError, ValueError) as exc:
+                        status = str(exc)
+                        continue
                 try:
                     try:
                         _save_preferences(state)

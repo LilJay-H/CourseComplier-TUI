@@ -12,7 +12,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
 from typing import Any
-from urllib.parse import parse_qs, unquote, urlsplit
+from urllib.parse import unquote, urlsplit
 
 
 @dataclass(frozen=True)
@@ -55,67 +55,16 @@ class ProductArtifacts:
 
 
 def exporter_script_path() -> Path | None:
-    """Return the userscript path in a checkout or an installed wheel."""
-    checkout = Path(__file__).resolve().parents[2] / "zhiyun_exporter.user.js"
-    if checkout.is_file():
-        return checkout
-    packaged = Path(__file__).resolve().parent / "assets" / "zhiyun_exporter.user.js"
-    return packaged if packaged.is_file() else None
-
-
-def _read_small_json(archive: zipfile.ZipFile, name: str, *, limit: int = 1024 * 1024) -> dict[str, Any]:
-    try:
-        info = archive.getinfo(name)
-    except KeyError:
-        return {}
-    if info.file_size > limit or info.flag_bits & 1:
-        return {}
-    with archive.open(info) as handle:
-        raw = handle.read(limit + 1)
-    if len(raw) > limit:
-        return {}
-    try:
-        value = json.loads(raw.decode("utf-8-sig"))
-    except (UnicodeError, ValueError):
-        return {}
-    return value if isinstance(value, dict) else {}
-
-
-def _page_query(page_url: str) -> dict[str, list[str]]:
-    split = urlsplit(page_url)
-    query = split.query
-    if not query and "?" in split.fragment:
-        query = split.fragment.split("?", 1)[1]
-    return parse_qs(query)
+    """Return only the script explicitly supplied with the external plugin."""
+    from .external_collector import configured_exporter_script
+    return configured_exporter_script()
 
 
 def inspect_asset_zip(asset_zip: str | Path) -> AssetIdentity:
-    """Extract safe display identity without exposing private signed URLs."""
-    path = Path(asset_zip).expanduser().resolve()
-    if not path.is_file():
-        raise FileNotFoundError(f"资产 ZIP 不存在: {path}")
-    with zipfile.ZipFile(path, "r") as archive:
-        course_info = _read_small_json(archive, "course_info.json")
-        private_info = _read_small_json(archive, "private/source.json")
-    title_value = course_info.get("courseName")
-    title = title_value.strip() if isinstance(title_value, str) and title_value.strip() else None
-    page_url = private_info.get("pageUrl") or course_info.get("pageUrl")
-    page_url = page_url.strip() if isinstance(page_url, str) else ""
-    query = _page_query(page_url) if page_url else {}
-    tenant = (query.get("tenant_code") or [""])[0]
-    course = (query.get("course_id") or [""])[0]
-    sub = (query.get("sub_id") or [""])[0]
-    parts = [part for part in (tenant, course, sub) if re.fullmatch(r"[A-Za-z0-9_-]+", part or "")]
-    if course and sub and len(parts) >= 2:
-        identity = "zhiyun-" + "-".join(parts)
-    else:
-        seed = page_url or path.name
-        identity = "zhiyun-" + hashlib.sha256(seed.encode("utf-8")).hexdigest()[:12]
-    from .organization import lecture_date
-    # Export timestamps and filenames are not classroom dates. Only explicitly
-    # typed lecture-date metadata (or a user override) has this meaning.
-    day = lecture_date(course_info.get('lectureDate', course_info.get('lecture_date')))
-    return AssetIdentity(title, identity, day)
+    """Get a browser export's display metadata from its configured plugin."""
+    from .external_collector import inspect_browser_export
+    details = inspect_browser_export(asset_zip)
+    return AssetIdentity(details["course_title"], details.get("source_id") or "browser-" + details["source_sha256"][:12], details["lecture_date"])
 
 
 def inspect_input_source(source: str | Path, *, source_kind: str | None = None) -> AssetIdentity:

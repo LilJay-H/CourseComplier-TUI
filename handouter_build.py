@@ -98,10 +98,8 @@ def _build_wheel_file(wheel_directory: str, *, editable: bool) -> str:
     else:
         for relative in _release_files():
             path = ROOT / relative
-            if relative.startswith("src/handouter/"):
+            if relative.startswith(("src/handouter/", "src/handouter_local/")):
                 files[relative.removeprefix("src/")] = path.read_bytes()
-            elif relative == "zhiyun_exporter.user.js":
-                files["handouter/assets/zhiyun_exporter.user.js"] = path.read_bytes()
             elif relative.startswith(".agents/skills/zhiyun-lecture-notes/"):
                 suffix = relative.removeprefix(".agents/skills/zhiyun-lecture-notes/")
                 files["handouter/assets/zhiyun-lecture-notes/" + suffix] = path.read_bytes()

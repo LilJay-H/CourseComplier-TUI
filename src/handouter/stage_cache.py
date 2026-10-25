@@ -24,6 +24,10 @@ def asset_fingerprint(path: str | Path) -> str:
     """Content identity excludes private URL query rotation, never stores URLs."""
     digest = hashlib.sha256()
     with zipfile.ZipFile(path) as archive:
+        if "handouter-input.json" not in archive.namelist():
+            from .external_collector import inspect_browser_export
+            details = inspect_browser_export(path)
+            return details.get("source_fingerprint") or details["source_sha256"]
         infos = archive.infolist()
         if len(infos) > 10000 or sum(i.file_size for i in infos) > 512 * 1024 * 1024:
             raise ValueError('资产超出安全大小限制')
@@ -35,13 +39,6 @@ def asset_fingerprint(path: str | Path) -> str:
             if name in names:
                 raise ValueError('资产包含重复成员')
             names.add(name)
-            if 'private' in name.split('/'):
-                if name.endswith('private/source.json') and info.file_size <= 1024 * 1024:
-                    private = json.loads(archive.read(info))
-                    for key in ('videoUrl', 'mediaUrl'):
-                        if isinstance(private.get(key), str):
-                            digest.update(_media_identity(private[key]).encode('utf-8'))
-                continue
             digest.update(name.encode('utf-8') + b'\0')
             with archive.open(info) as source:
                 for chunk in iter(lambda: source.read(1024 * 1024), b''):

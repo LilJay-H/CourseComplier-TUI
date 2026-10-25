@@ -1,6 +1,6 @@
-# PPT / 智云资产 ZIP 导入协议
+# PPT ZIP 导入与浏览器包转换
 
-更新：2026-09-14，适用于 Handouter 0.2.0。**生产实现位于 `src/handouter/importers.py`**。完整课程推荐直接使用 `handouter prepare --slides-zip` 或 `handouter build-asset`。
+更新：2026-10-25，适用于 Handouter 0.2.0。PPT 导入位于 `src/handouter/importers.py`；浏览器包转换经 `external_collector.py` 调用独立插件。已有转写可用 `handouter prepare --slides-zip`；浏览器课程包先按插件指南配置并确认域名。
 
 ## 推荐使用
 
@@ -14,41 +14,9 @@ PYTHONPATH=src .venv/bin/python -m handouter prepare \
   --slides-zip /path/to/资产包.zip
 ```
 
-### 新版智云资产 ZIP 一键处理
+### 浏览器课程 ZIP
 
-```bash
-PYTHONPATH=src .venv/bin/python -m handouter build-asset \
-  /path/to/资产包.zip \
-  --lecture-id lecture-001 \
-  --course-title "课程名称"
-```
-
-`build-asset` 会从 ZIP 的 `private/source.json` **只在内存中**读取视频 URL，PPT importer 不会把 `private/`、媒体签名 URL 或 page URL 解包到工作区。
-
-输出目录必须不存在；不会覆盖已有课程材料。
-
-## v1.4 浏览器资产格式
-
-新版 `zhiyun_exporter.user.js` 导出：
-
-```text
-课程资产.zip
-├── slides/
-│   └── slide_001.jpg ...
-├── slides_meta.json
-├── course_info.json              # 公共安全课程摘要
-└── private/
-    └── source.json               # 视频/page URL；私有，不交给 Agent
-```
-
-`slides_meta.json` 不保存图片签名 URL。时间字段约定：
-
-- 明确时间：`timestamp` + `seconds`；
-- 未知时间：二者为 null；
-- 无法确认单位的原始数值：保留 `timeStatus=unknown_numeric_unit`、`sourceField`、`rawTimeValue` 供诊断，但不会被 importer 猜成秒/毫秒；
-- 图片下载状态：`status=ok|missing_image`。
-
-旧资产仍兼容 `timestamp/time/switchTime` 时钟字符串和明确为秒的 `seconds`，但多个时间字段若互相矛盾会拒绝导入。
+浏览器 ZIP 由[独立采集插件](EXTERNAL_COLLECTOR.md)预检，用户确认域名后下载并转换；TUI 不读取私有 URL。站点格式与脚本由插件仓库维护。`prepare --slides-zip` 仍可只导入图片和安全时间信息，不进行联网采集。
 
 ## 时间与展示事件
 
@@ -71,7 +39,7 @@ PYTHONPATH=src .venv/bin/python -m handouter build-asset \
 
 ## ZIP 安全边界
 
-生产 importer：
+只导入 PPT 的 importer（标准包经插件完整预检的流式入口见外部采集器指南）：
 
 - 不使用 `extractall()`；
 - 拒绝绝对路径、`..`、反斜线/跨平台歧义路径；
@@ -80,7 +48,6 @@ PYTHONPATH=src .venv/bin/python -m handouter build-asset \
 - 总未压缩体积 ≤ 512 MiB；
 - 单图 ≤ 32 MiB；
 - PPT 元数据 ≤ 8 MiB；
-- `private/source.json` 读取上限 1 MiB，且只允许唯一 HTTP(S) `videoUrl`；
 - 新目录排他写入；可捕获失败清理本次新产物。
 
 这些保护不等于抵御恶意本地并发写入或强制断电的事务系统。
@@ -95,7 +62,7 @@ PYTHONPATH=src .venv/bin/python -m handouter build-asset \
 - ASR 结果；
 - handoff。
 
-不会把 `private/source.json`、完整 URL、Cookie、API Key 复制进 manifest/Prompt/sources。合成 E2E 已使用私有签名参数实际搜索确认未泄漏；真实智云仍按 `ACCEPTANCE.md` 验收。
+不会把 `private/source.json`、完整 URL、Cookie、API Key 复制进 manifest/Prompt/sources。真实站点登录、下载与整课生成需另行验收。
 
 ## 与 ASR 的关联
 
@@ -107,6 +74,4 @@ PYTHONPATH=src .venv/bin/python -m handouter build-asset \
 
 ## 验证状态
 
-当前完整项目回归为 **141 / 141 通过（macOS 本机）**。其中 `tests/test_slide_import.py` 继续覆盖 ZIP 专项回归；其余测试覆盖 importer、浏览器契约、workspace、媒体、ASR、ZIP 直接路径/拖入、中文终端宽度、ASCII TUI、多输出 handoff、Windows 路径/进程树/doctor、portable 文件名、安装和 Prompt/格式约束。
-
-尚需真实验收：智云 v1.4 页面字段、真实 CDN/m3u8/mp4、整课 ASR 和真实 Agent 讲义语义，详见 [当前状态](../PROJECT_STATUS.md)。
+PPT 安全路径、图片和时间元数据由 `tests/test_slide_import.py` 覆盖；外部工具确认、配置绑定、标准包检查与取消由 `tests/test_external_collection.py` 覆盖。实际平台和真实课程边界见[当前状态](../PROJECT_STATUS.md)。
