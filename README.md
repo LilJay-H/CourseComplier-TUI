@@ -4,7 +4,7 @@
 
 保留 Complete / Deep / Full / Summary / Verbatim、手动交接、已有讲义续作和结构校验。本仓库包含本地 Workflow 必需规则；不包含 GUI、Server、团队高精度 Agent 服务、云客户端或团队 token。
 
-这是面向开源方向的独立仓库，当前托管于 [GitHub 私有仓库](https://github.com/LilJay-H/CourseComplier-TUI)，尚未公开；许可证尚未确认，见 [来源与归属](NOTICE.md)。包名仍为 `handouter`，两个命令 `course-compiler`、`handouter` 兼容。请用独立虚拟环境，避免覆盖旧混合仓库的同名安装。
+这是面向开源方向的独立仓库，当前托管于 [GitHub 公开仓库](https://github.com/LilJay-H/CourseComplier-TUI)；许可证尚未确认，见 [来源与归属](NOTICE.md)。包名仍为 `handouter`，两个命令 `course-compiler`、`handouter` 兼容。请用独立虚拟环境，避免覆盖旧混合仓库的同名安装。
 
 ## 安装与启动
 

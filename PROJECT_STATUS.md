@@ -4,7 +4,7 @@
 
 ## 本次外部采集器迁移（2026-10-25）
 
-- 已将原仓 `0a21e87` 的通用外部采集宿主同步到协作分支 `codex/external-collector-sync`；本轮变更需经审阅后合并到 `main`。
+- 已将原仓 `0a21e87` 的通用外部采集宿主同步到协作分支 `codex/external-collector-sync`；已经 PR #1 合并到 `main`（`5280a2c`）。
 - 新增 `collector-configure` / `collector-inspect`；浏览器 ZIP 在 TUI 中先确认域名，再由独立插件下载转换。TXT、音视频、标准 ZIP 和两个命令入口保留。
 - 智云页面解析、私有媒体字段读取、默认站点 Referer 与浏览器脚本不再内置。插件与脚本由 `Silhouette-my/zhiyun-collector`（0.3.0.dev2）单独提供，安装见 `docs/EXTERNAL_COLLECTOR.md`。
 - 仅复用 `handouter_local` 三个离线标准包校验文件；无 GUI runtime、GGUF、组件管理、云客户端。保留同伴课程别名/目录参数和 POSIX 路径修复。
@@ -30,4 +30,4 @@
 - 未调用真实 Codex/Claude 模型，登录、额度、CLI 上游兼容性及讲义语义质量待真实使用验证。没有团队云依赖。
 - Linux、其他 Python 版本、真实课程平台 CDN/签名链接未实测。历史 Windows 环境无法创建 symlink；本次 macOS 合成测试的权限边界与其不同。
 - 本次 wheel/sdist 和 Windows 源码启动 ZIP 不附带 FFmpeg、模型或完整离线依赖。媒体测试复用了机器现有 FFmpeg/ffprobe；其他机器需按 README 准备。
-- 独立 TUI 原版本已托管于 `LilJay-H/CourseComplier-TUI` 私有仓库；本次已确认协作者 WRITE 权限。尚未公开，没有新增许可证；公开授权和许可证仍需另行决定。
+- 独立 TUI 已托管于 `LilJay-H/CourseComplier-TUI`，仓库已公开（2026-10-30 核对）；协作者有 WRITE 权限。尚未新增许可证，公开授权和许可证仍需另行决定。
