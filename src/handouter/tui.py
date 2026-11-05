@@ -20,6 +20,7 @@ import unicodedata
 from typing import Any
 
 from .agents import available_cli_agents
+from . import tui_text
 from .handoff import MODES, MODE_ORDER
 from .platform_support import open_directory, start_task_process, terminate_process_tree
 from .product import (exporter_script_path, inspect_input_source, normalize_terminal_path,
@@ -36,10 +37,44 @@ from .organization import resolve_workspace, find_workspace, package_for_workspa
 App = None
 
 
+_LANGUAGE = tui_text.DEFAULT_LANGUAGE
+
+
+def set_language(language: object) -> str:
+    """Select the interface language for all TUI screens (zh default, en)."""
+    global _LANGUAGE
+    _LANGUAGE = tui_text.normalize_language(language)
+    return _LANGUAGE
+
+
+def _t(key: str, **values: object) -> str:
+    return tui_text.text(key, _LANGUAGE, **values)
+
+
+_FIELD_TEXT = {'asset': 'label_asset', 'output_dir': 'label_output_dir', 'title': 'label_title',
+               'lecture': 'label_lecture', 'lecture_date': 'label_lecture_date'}
+
+
+def _field_label(field_key: str, fallback: str) -> str:
+    key = _FIELD_TEXT.get(field_key)
+    return _t(key) if key else fallback
+
+
+def _pad(text: str, columns: int) -> str:
+    """Left-align by display columns (Chinese characters are two columns)."""
+    return text + " " * max(0, columns - _display_width(text))
+
+
+def _kind_label(kind: str) -> str:
+    key = {'zhiyun_asset_zip': 'kind_zhiyun_asset_zip', 'local_asset_package': 'kind_local_asset_package',
+           'audio': 'kind_audio', 'media': 'kind_media', 'transcript': 'kind_transcript'}.get(kind)
+    return _t(key) if key else kind
+
+
 def available_agent_choices() -> tuple[list[str], dict[str, str]]:
     """Return only Agent backends that are usable on this machine."""
     values = ["web", "manual"]
-    labels = {"web": "Web Chat (TXT/PDF)", "manual": "GUI handoff"}
+    labels = {"web": _t("agent_web"), "manual": _t("agent_manual")}
     for item in available_cli_agents():
         if not item.available:
             continue
@@ -308,7 +343,7 @@ def _edit_value(stdscr, label: str, current: str, *, initial: str = "") -> tuple
             height, width = stdscr.getmaxyx()
             if height < 3 or width < 12:
                 stdscr.erase()
-                _safe_add(stdscr, 0, 0, 'Resize terminal; Esc cancels')
+                _safe_add(stdscr, 0, 0, _t('edit_resize'))
                 stdscr.refresh()
                 key = stdscr.get_wch()
                 if key == '\x1b':
@@ -320,7 +355,7 @@ def _edit_value(stdscr, label: str, current: str, *, initial: str = "") -> tuple
                     cursor += len(key)
                 continue
             row = max(1, height - 1)
-            prompt = f"EDIT {label}: "
+            prompt = _t("edit_prompt", label=label)
             prompt_width = _display_width(prompt)
             available = max(8, width - prompt_width - 4)
             start = cursor
@@ -342,7 +377,7 @@ def _edit_value(stdscr, label: str, current: str, *, initial: str = "") -> tuple
             visible = value[start:end]
             stdscr.move(row, 0)
             stdscr.clrtoeol()
-            _safe_add(stdscr, row, 1, prompt + visible)
+            _safe_add(stdscr, row, 1, prompt + visible, curses.A_REVERSE)
             cursor_col = 1 + prompt_width + _display_width(value[start:cursor])
             try:
                 stdscr.move(row, min(width - 2, cursor_col))
@@ -399,6 +434,11 @@ def _load_asset_into_state(state: dict[str, Any]) -> str:
     if not raw:
         return "请选择输入文件：支持资产 ZIP、本地音频/视频或 UTF-8 TXT。"
     normalized = normalize_terminal_path(raw)
+    if Path(normalized).is_absolute() and Path(normalized).is_dir():
+        zips = sorted(p.name for p in Path(normalized).glob('*.zip'))
+        hint = f'里面有 {len(zips)} 个 ZIP，把要转换的那一个拖进来' if zips else '请拖入其中的 ZIP、音视频或 TXT 文件'
+        raise ValueError(f'这是文件夹，不是单个资料文件：{hint}；'
+                         '想把它设为默认输入目录，请用最下面的 [ DIRECTORIES ]')
     asset = resolve_input_source(state.get('input_dir') or '.', normalized)
     state["asset"] = str(asset)
     state.pop("allowed_media_hosts", None)
@@ -425,7 +465,7 @@ def _load_asset_into_state(state: dict[str, Any]) -> str:
         state['course_output_configured'] = configured_course_output(state['title'], settings=directories) is not None
         state.pop('workspace', None)
     state['_identified_asset'] = str(asset)
-    return f"Loaded: {asset.name}  |  {detected_kind}  |  course/id identified."
+    return _t("status_loaded", name=asset.name, kind=_kind_label(detected_kind))
 
 
 def _confirm_collection(stdscr, state: dict[str, Any]) -> bool:
@@ -437,14 +477,14 @@ def _confirm_collection(stdscr, state: dict[str, Any]) -> bool:
     offset = 0
     while True:
         height, width = stdscr.getmaxyx()
-        rows = ["Download stays on this computer. Upload needs separate consent.", "", "Exact media domains:"]
+        rows = [_t("collect_intro"), "", _t("collect_domains")]
         for host in details["media_hosts"]:
             rows.extend(textwrap.wrap(host, max(12, width - 6)))
         stdscr.erase()
-        _safe_add(stdscr, 1, 2, " CONFIRM LOCAL COLLECTION ")
+        _safe_add(stdscr, 1, 2, _t("collect_title"))
         for index, row in enumerate(rows[offset:offset + max(1, height - 6)]):
             _safe_add(stdscr, index + 3, 2, row)
-        _safe_add(stdscr, height - 2, 2, "Y: confirm domains and collect | N/Esc: cancel | Up/Down: scroll")
+        _safe_add(stdscr, height - 2, 2, _t("collect_keys"))
         stdscr.refresh()
         key = stdscr.getch()
         if key in (ord("y"), ord("Y")):
@@ -483,7 +523,57 @@ def _commit_text_value(state: dict[str, Any], field_key: str, value: str) -> str
     return None
 
 
+def _read_paste_burst(stdscr, *, settle_ms: int = 30, limit: int = 4096) -> str:
+    """Collect input that is already queued right after one key (a paste or drop).
+
+    A human types one key at a time; a terminal paste/drop delivers the whole
+    path at once. Used so a pasted path is never interpreted as button hotkeys.
+    """
+    import curses
+    collected: list[str] = []
+    try:
+        stdscr.nodelay(True)
+        idle = 0
+        for _ in range(limit + 8):
+            if idle >= 2:
+                break
+            try:
+                key = stdscr.get_wch()
+            except curses.error:
+                idle += 1
+                curses.napms(settle_ms)
+                continue
+            idle = 0
+            if not isinstance(key, str) or key in ('\n', '\r') or not key.isprintable():
+                # Enter ends a paste; a special key means a human is typing.
+                break
+            collected.append(key)
+    finally:
+        stdscr.nodelay(False)
+    return ''.join(collected)
+
+
+def _full_repaint(stdscr) -> None:
+    """Force a full redraw when switching screens.
+
+    windows-curses keeps one cell per CJK character while the console draws two,
+    so a plain erase() can leave stale glyphs from the previous screen behind.
+    """
+    try:
+        stdscr.clear()
+    except Exception:
+        pass
+
+
 def _directory_dialog(stdscr, state: dict[str, Any]) -> bool:
+    _full_repaint(stdscr)
+    try:
+        return _directory_dialog_screen(stdscr, state)
+    finally:
+        _full_repaint(stdscr)
+
+
+def _directory_dialog_screen(stdscr, state: dict[str, Any]) -> bool:
     """Persist global defaults and, when a course is known, one course override."""
     import curses
     try:
@@ -497,34 +587,44 @@ def _directory_dialog(stdscr, state: dict[str, Any]) -> bool:
         course_title = resolve_course_title(course_title, settings=current)
     draft = {'input_dir': str(current.get('input_dir') or state.get('input_dir') or ''),
              'default_output_dir': str(current.get('output_dir') or state.get('output_dir') or '')}
-    fields = [('input_dir', 'Input Dir'), ('default_output_dir', 'Default Output')]
+    fields = [('input_dir', _t('dir_input_dir')), ('default_output_dir', _t('dir_default_output_dir'))]
     if course_title:
         draft['course_output_dir'] = configured_course_output(course_title, settings=current) or ''
         draft['course_aliases'] = ', '.join(aliases_for_course(course_title, settings=current))
         draft['folder_name_mode'] = course_folder_mode(course_title, settings=current)
-        fields.extend([('course_output_dir', 'Course Output'), ('course_aliases', 'Aliases'),
-                       ('folder_name_mode', 'Folder Name')])
+        fields.extend([('course_output_dir', _t('dir_course_output_dir')), ('course_aliases', _t('dir_course_aliases')),
+                       ('folder_name_mode', _t('dir_folder_name_mode'))])
     selected = 0
-    message = ('Aliases: comma separated. Folder Name: auto/always/never. auto omits the course name when Output Dir is already the course/alias.'
-               if course_title else 'Set the global default directories. Load a course to add course aliases/output rules.')
+    message = _t('dir_message_course') if course_title else _t('dir_message_global')
     while True:
         height, width = stdscr.getmaxyx()
         stdscr.erase()
-        _box(stdscr, 0, 0, max(7, height - 2), max(20, width - 2), ' DIRECTORIES ')
+        _box(stdscr, 0, 0, max(7, height - 2), max(20, width - 2), _t('box_directories'))
         for index, (key, label) in enumerate(fields):
-            shown = draft[key] or ('<inherit default>' if key == 'course_output_dir' else '<empty>')
+            shown = draft[key] or (_t('dir_inherit') if key == 'course_output_dir' else _t('dir_empty'))
             _panel_add(stdscr, 3 + index * 2, 3, width - 3, f'{label}: {shown}',
                        curses.A_REVERSE if selected == index else 0)
         save_index = len(fields)
         save_row = 3 + len(fields) * 2
-        _panel_add(stdscr, save_row, 3, width - 3, '[ SAVE ]',
+        _panel_add(stdscr, save_row, 3, width - 3, _t('dir_save'),
                    curses.A_REVERSE if selected == save_index else 0)
         _panel_add(stdscr, save_row + 2, 3, width - 3, message)
-        _panel_add(stdscr, save_row + 4, 3, width - 3, 'Tab/Arrows select | Enter edit/save | Esc cancel')
+        _panel_add(stdscr, save_row + 4, 3, width - 3, _t('dir_keys'))
+        _panel_add(stdscr, save_row + 5, 3, width - 3, _t('dir_type_hint'))
         stdscr.refresh()
         key = stdscr.getch()
         if key == 27:
             return False
+        if selected < save_index and 32 <= key <= 126:
+            # Same as the main form: typing (or a dropped/pasted path) starts a replacement.
+            name, label = fields[selected]
+            value, committed = _edit_value(stdscr, label, draft[name], initial=chr(key))
+            if committed:
+                if name in {'input_dir', 'default_output_dir', 'course_output_dir'}:
+                    draft[name] = normalize_terminal_path(value) if value.strip() else ''
+                else:
+                    draft[name] = value.strip()
+            continue
         if key in (9, 258):
             selected = (selected + 1) % (save_index + 1)
         elif key in (353, 259):
@@ -555,7 +655,7 @@ def _directory_dialog(stdscr, state: dict[str, Any]) -> bool:
                             Path(resolve_output_directory(course_title, settings=saved)).mkdir(parents=True, exist_ok=True)
                     effective = resolve_output_directory(course_title or None, settings=saved)
                 except (OSError, ValueError) as exc:
-                    message = f'Cannot save: {exc}'
+                    message = _t('dir_cannot_save', error=exc)
                     continue
                 if state.get('output_dir') != effective:
                     state.pop('workspace', None)
@@ -578,7 +678,7 @@ def _view_text(stdscr, title: str, path: Path) -> None:
         page = max(1, height - 5)
         for row, line in enumerate(lines[offset : offset + page], start=2):
             _panel_add(stdscr, row, 2, width - 3, line)
-        _safe_add(stdscr, height - 1, 1, "Up/Down scroll | PgUp/PgDn | Q/Esc return")
+        _safe_add(stdscr, height - 1, 1, _t("view_keys"))
         stdscr.refresh()
         key = stdscr.getch()
         if key in (ord("q"), ord("Q"), 27):
@@ -632,14 +732,15 @@ def _load_workspace_into_state(state: dict[str, Any], value: str) -> None:
 
 
 _PREFERENCE_FIELDS = {'output_dir', 'workspace', 'lecture', 'notes_deep', 'notes_summary', 'notes_full', 'notes_complete',
-                      'verbatim_transcript', 'format_profile', 'use_slides', 'embed_slides', 'allow_web', 'device', 'agent'}
+                      'verbatim_transcript', 'format_profile', 'use_slides', 'embed_slides', 'allow_web', 'device', 'agent',
+                      'language'}
 
 
 def _safe_preferences(raw: dict) -> dict:
     result = {}
     boolean_fields = {'notes_deep', 'notes_summary', 'notes_full', 'notes_complete', 'verbatim_transcript', 'use_slides', 'embed_slides', 'allow_web'}
     enums = {'agent': {'web', 'manual', 'codex', 'claude'}, 'format_profile': {'clean', 'traceable'},
-             'device': {'auto', 'cpu', 'mps', 'cuda'}}
+             'device': {'auto', 'cpu', 'mps', 'cuda'}, 'language': set(tui_text.LANGUAGES)}
     for key, value in raw.items():
         if key not in _PREFERENCE_FIELDS:
             continue
@@ -687,46 +788,42 @@ def _result_rows(workspace: Path) -> list[str]:
     if not isinstance(state, dict) or not isinstance(sources, dict):
         raise ValueError('任务控制文件必须是 JSON 对象')
     material_status = {
-        'busy': 'not checked while another task is running',
-        'invalid': 'not confirmed; inspect validation errors',
-        'recovery_required': 'recovery required before validation',
-    }.get(plan.action, 'validated task snapshot (transcript / selected PPT / Prompt)')
-    rows = [f'Workspace: {workspace}', f'Task ID: {plan.task_id}', f'Status: {plan.action}',
-            'Materials: ' + material_status, '', 'Markdown:']
+        'busy': _t('materials_busy'),
+        'invalid': _t('materials_invalid'),
+        'recovery_required': _t('materials_recovery'),
+    }.get(plan.action, _t('materials_ok'))
+    rows = [_t('results_workspace', value=workspace), _t('results_task', value=plan.task_id),
+            _t('results_status', value=plan.action), _t('results_materials', value=material_status), '',
+            _t('results_markdown')]
     package = package_for_workspace(workspace)
     publication = state.get('publication') or {}
     if package:
-        rows[0:0] = [f'Results folder: {package / "成果"}',
-                     'Publication: ' + str(publication.get('status') or 'not published')]
-        rows.extend('Publication error: ' + _diagnostic_line('course-compiler: error: ' + str(error))
+        rows[0:0] = [_t('results_folder', value=package / "成果"),
+                     _t('results_publication', value=publication.get('status') or _t('not_published'))]
+        rows.extend(_t('results_publication_error', value=_diagnostic_line('course-compiler: error: ' + str(error)))
                     for error in publication.get('errors', []))
     outputs = sources.get('expected_outputs') or {sources.get('mode', 'deep'): sources.get('expected_output')}
     for mode, path in outputs.items():
-        rows.append(f'  {mode}: ' + ('ready' if mode in plan.completed else 'pending') + f' | {path}')
-    rows.extend(['', 'Quality (no automatic semantic certification):'])
+        rows.append(f'  {mode}: ' + (_t('output_ready') if mode in plan.completed else _t('output_pending')) + f' | {path}')
+    rows.extend(['', _t('results_quality')])
     for mode, quality in getattr(plan, 'quality', {}).items():
         rows.append('  ' + mode + ': ' + quality['editorial_state'])
         for key in ('structure_resources', 'quote_locations', 'source_preservation', 'claim_support', 'technical', 'rendering'):
             item = quality[key]
             rows.append('    ' + key + ': ' + item['status'] + ' [' + item['basis'] + ']')
     delivery = state.get('html_delivery') or {}
-    rows.extend(['', 'HTML: ' + str(delivery.get('status') or 'not exported')])
+    rows.extend(['', _t('results_html', value=delivery.get('status') or _t('not_exported'))])
     for mode, path in (delivery.get('outputs') or {}).items():
         rows.append(f'  {mode}: {path}')
     for error in delivery.get('errors') or []:
         rows.append('  ' + _diagnostic_line('course-compiler: error: ' + str(error)))
     web = sorted(workspace.glob('handoff/*web-chat-*/Materials.txt'))
     bundles = sorted(workspace.glob('handoff/*gui-handoff-*.zip'))
-    rows.extend(['', 'Uploads: ' + (str(web[-1].parent) if web else str(bundles[-1]) if bundles else 'not prepared')])
-    next_steps = {'complete': 'Open results; P creates a new task version.', 'html_only': 'RUN retries HTML only; Markdown stays unchanged.',
-                  'publish_only': 'RUN repairs result copies only; no ASR or Agent.',
-                  'partial': 'RUN continues pending modes; I imports a returned Markdown.',
-                  'generate': 'RUN creates a handoff or starts the selected Agent.',
-                  'refresh_required': 'P refreshes the task; choose a new lecture for changed materials.',
-                  'invalid': 'Inspect validation errors; existing results are preserved.',
-                  'busy': 'Wait for the running task to finish.', 'recovery_required': 'Continue to recover the interrupted task.'}
-    rows.extend(['', 'Next: ' + next_steps.get(plan.action, 'Inspect task status.')])
-    rows.extend('Review: ' + _diagnostic_line('course-compiler: error: ' + str(message)) for message in (*plan.errors, *plan.warnings))
+    rows.extend(['', _t('results_uploads', value=(str(web[-1].parent) if web else str(bundles[-1]) if bundles else _t('not_prepared')))])
+    known = {'complete', 'html_only', 'publish_only', 'partial', 'generate', 'refresh_required', 'invalid', 'busy', 'recovery_required'}
+    rows.extend(['', _t('results_next', value=_t('next_' + plan.action) if plan.action in known else _t('next_unknown'))])
+    rows.extend(_t('results_review', value=_diagnostic_line('course-compiler: error: ' + str(message)))
+                for message in (*plan.errors, *plan.warnings))
     return rows
 
 
@@ -736,10 +833,10 @@ def _show_results(stdscr, workspace: Path) -> None:
     while True:
         height, width = stdscr.getmaxyx()
         stdscr.erase()
-        _box(stdscr, 0, 0, height - 2, width - 2, ' RESULTS / TASK STATUS ')
+        _box(stdscr, 0, 0, height - 2, width - 2, _t('results_title'))
         for row, text in enumerate(rows[offset:offset + max(1, height - 5)], 2):
             _panel_add(stdscr, row, 2, width - 3, text)
-        _safe_add(stdscr, height - 1, 1, 'Up/Down scroll | O open results folder | Q/Esc return')
+        _safe_add(stdscr, height - 1, 1, _t('results_keys'))
         stdscr.refresh()
         key = stdscr.getch()
         if key in (ord('q'), ord('Q'), 27):
@@ -840,7 +937,7 @@ def _task_error_summary(lines: list[str], code: int) -> str:
         if text.startswith(("course-compiler: error:", "handouter: error:")):
             return _diagnostic_line(text)
     tail = [line.strip() for line in list(lines)[-4:] if line.strip()]
-    return " | ".join(tail) if tail else f"Task ended with code {code}."
+    return " | ".join(tail) if tail else _t("task_code", code=code)
 
 
 def _diagnostic_line(line: str) -> str:
@@ -850,7 +947,7 @@ def _diagnostic_line(line: str) -> str:
     if line.startswith('handouter: error:'):
         line = 'course-compiler: error:' + line[len('handouter: error:'):]
     if not line.startswith(('[progress]', 'course-compiler: error:')):
-        return '[task output omitted; use Results for delivery status]'
+        return _t('task_output_omitted')
     line = re.sub(r'https?://[^\s]+', '[URL hidden]', line, flags=re.I)
     return line[:300]
 
@@ -877,7 +974,7 @@ def _run_task(stdscr, state: dict[str, Any], *, prompt_only: bool, command: list
     process, job = start_task_process(cli_args, **kwargs)
     cancellation = None
     lines = deque(maxlen=200)
-    progress_line = {"text": "Working..."}
+    progress_line = {"text": _t("running_working")}
 
     def reader() -> None:
         assert process.stdout is not None
@@ -897,8 +994,8 @@ def _run_task(stdscr, state: dict[str, Any], *, prompt_only: bool, command: list
         while process.poll() is None:
             height, width = stdscr.getmaxyx()
             stdscr.erase()
-            _box(stdscr, 0, 0, max(5, height - 2), max(20, width - 2), " COURSE COMPILER / RUNNING ")
-            _panel_add(stdscr, 2, 2, width - 3, progress_line["text"] + "  Q/Esc = cancel process group")
+            _box(stdscr, 0, 0, max(5, height - 2), max(20, width - 2), _t("running_title"))
+            _panel_add(stdscr, 2, 2, width - 3, progress_line["text"] + _t("running_cancel"))
             for row, line in enumerate(list(lines)[-max(1, height - 7) :], start=4):
                 _panel_add(stdscr, row, 2, width - 3, line)
             stdscr.refresh()
@@ -922,35 +1019,220 @@ def _run_task(stdscr, state: dict[str, Any], *, prompt_only: bool, command: list
         finally:
             stdscr.nodelay(False)
     if code != 0:
-        return False, _task_error_summary(lines, code) + ' Existing results retained; R shows status and retry action.'
+        return False, _task_error_summary(lines, code) + _t('run_failed_suffix')
     if action in {'complete', 'html_only', 'publish_only', 'retry-html', 'import-note', 'task-status'}:
-        return True, 'Results updated. R shows Markdown, HTML and the next action; semantic review remains required.'
+        return True, _t('run_results_updated')
     if action == 'continue':
-        return True, 'Prepared workspace continued. R shows each deliverable and upload files.'
+        return True, _t('run_continued')
     agent = str(cfg.get("agent") or "manual")
     if agent == "web":
         root = _workspace_for_state(cfg) / 'handoff'
         exports = sorted(root.glob("*web-chat-*/Materials.txt"))
         location = str(exports[-1].parent) if exports else str(root)
-        return True, f"Upload Materials.txt and Slides.pdf (if present) from: {location}"
+        return True, _t("run_web_uploads", location=location)
     if action == "bundle":
         root = _workspace_for_state(cfg) / 'handoff'
         bundles = sorted(root.glob("*gui-handoff-*.zip"), key=lambda path: path.stat().st_mtime_ns if path.exists() else 0)
         suffix = f" {bundles[-1]}" if bundles else ""
-        return True, "Existing workspace reused; GUI handoff bundle ready:" + suffix
+        return True, _t("run_bundle_reused", suffix=suffix)
     if action == "agent":
-        return True, f"Existing workspace reused; {agent} finished; outputs structurally validated."
+        return True, _t("run_agent_reused", agent=agent)
     if action == "refresh":
-        return True, ("Prompt refreshed and GUI handoff bundle ready." if agent == "manual" else f"Prompt refreshed; {agent} finished; outputs structurally validated.")
+        return True, (_t("run_refresh_bundle") if agent == "manual" else _t("run_refresh_agent", agent=agent))
     if action == "reuse":
-        return True, "Existing workspace is valid."
-    return True, ("GUI handoff bundle ready." if agent == "manual" else f"{agent} finished; outputs structurally validated.")
+        return True, _t("run_reuse")
+    return True, (_t("run_bundle") if agent == "manual" else _t("run_agent_done", agent=agent))
+
+
+class _CellScreen:
+    """Display-column compositor for windows-curses (PDCurses).
+
+    PDCurses stores one cell per CJK character while the console draws it two
+    columns wide, so everything after a Chinese character on a row is pushed
+    right (and borders fall off the edge). Callers keep drawing in true display
+    columns; rows are composed here and the whole screen is rewritten on refresh.
+
+    PDCurses has two output paths and they place text differently:
+    * console API (classic console, most embedded terminals): a row written from
+      column 0 flows naturally, so wide characters take one PDCurses cell each
+      ("collapsed" layout) and the cursor column is translated;
+    * ANSI (Windows Terminal / ConEmu, chosen by PDCurses from WT_SESSION or
+      ConEmuANSI): every attribute run is positioned at its PDCurses column, so
+      run starts must equal display columns. A run is broken after each wide
+      character with a same-looking colour pair, and the cell a wide character
+      saves is emitted as a trailing space that the next run overwrites.
+    """
+
+    _WIDE_TAIL = None
+
+    def __init__(self, screen, *, ansi: bool | None = None, shadow: int | None = None) -> None:
+        self._screen = screen
+        self._rows: dict[int, list] = {}
+        self._cursor: tuple[int, int] | None = None
+        if ansi is None:
+            ansi = bool(os.environ.get('WT_SESSION')) or os.environ.get('ConEmuANSI') == 'ON'
+        self._ansi = ansi
+        self._shadow = shadow
+        if ansi and shadow is None:
+            self._shadow = self._make_shadow()
+
+    @staticmethod
+    def _make_shadow() -> int | None:
+        import curses
+        try:
+            curses.start_color()
+            curses.use_default_colors()
+            pair = min(63, max(1, curses.COLOR_PAIRS - 1))
+            curses.init_pair(pair, -1, -1)
+            return curses.color_pair(pair)
+        except Exception:
+            return None
+
+    def __getattr__(self, name):
+        return getattr(self._screen, name)
+
+    def _row(self, row: int) -> list:
+        width = self._screen.getmaxyx()[1]
+        cells = self._rows.get(row)
+        if cells is None or len(cells) != width:
+            cells = [(" ", 0)] * width
+            self._rows[row] = cells
+        return cells
+
+    def erase(self) -> None:
+        self._rows = {}
+        self._screen.erase()
+
+    def clear(self) -> None:
+        self._rows = {}
+        self._screen.clear()
+
+    def move(self, row: int, col: int) -> None:
+        self._cursor = (row, col)
+
+    def clrtoeol(self) -> None:
+        if self._cursor is None:
+            return
+        row, col = self._cursor
+        cells = self._row(row)
+        if 0 < col < len(cells) and cells[col][0] is self._WIDE_TAIL:
+            cells[col - 1] = (" ", cells[col - 1][1])
+        for index in range(max(0, col), len(cells)):
+            cells[index] = (" ", 0)
+
+    def addstr(self, row: int, col: int, text: str, attr: int = 0) -> None:
+        height, width = self._screen.getmaxyx()
+        if row < 0 or row >= height or col < 0:
+            return
+        cells = self._row(row)
+        for char in str(text):
+            char_width = _char_width(char)
+            if char_width == 0:
+                continue
+            if col + char_width > width:
+                break
+            for index in range(col, col + char_width):
+                if cells[index][0] is self._WIDE_TAIL and index > 0 and index == col:
+                    cells[index - 1] = (" ", cells[index - 1][1])
+                if (index + 1 < width and cells[index + 1][0] is self._WIDE_TAIL
+                        and index + 1 >= col + char_width):
+                    cells[index + 1] = (" ", cells[index + 1][1])
+            cells[col] = (char, attr)
+            if char_width == 2:
+                cells[col + 1] = (self._WIDE_TAIL, attr)
+            col += char_width
+        self._cursor = (row, col)
+
+    @property
+    def _run_starts_are_display_columns(self) -> bool:
+        return self._ansi and self._shadow is not None
+
+    def _collapsed_runs(self, cells: list) -> list[tuple[int, str, int]]:
+        runs: list[tuple[int, str, int]] = []
+        physical = 0
+        run: list[str] = []
+        run_attr, run_start = None, 0
+        for char, attr in cells:
+            if char is self._WIDE_TAIL:
+                continue
+            if attr != run_attr and run:
+                runs.append((run_start, ''.join(run), run_attr))
+                run, run_start = [], physical
+            run_attr = attr
+            run.append(char)
+            physical += 1
+        if run:
+            runs.append((run_start, ''.join(run), run_attr))
+        return runs
+
+    def _ansi_runs(self, cells: list) -> list[tuple[int, str, int]]:
+        runs: list[list] = []
+        parity = 0
+        current = None
+        for index, (char, attr) in enumerate(cells):
+            if char is self._WIDE_TAIL:
+                continue
+            wide = index + 1 < len(cells) and cells[index + 1][0] is self._WIDE_TAIL
+            effective = attr | (self._shadow if parity else 0)
+            if current is None or current[2] != effective:
+                current = [index, [], effective, 0]
+                runs.append(current)
+            current[1].append(char)
+            if wide:
+                current[3] += 1
+                parity ^= 1
+        return [(start, ''.join(chars) + ' ' * spare, attr) for start, chars, attr, spare in runs]
+
+    def refresh(self) -> None:
+        height, _width = self._screen.getmaxyx()
+        display_columns = self._run_starts_are_display_columns
+        for row, cells in sorted(self._rows.items()):
+            if row >= height:
+                continue
+            for start, text, attr in (self._ansi_runs(cells) if display_columns else self._collapsed_runs(cells)):
+                self._emit(row, start, text, attr)
+        try:
+            # Rewrite whole rows in order: partial updates would be positioned in
+            # PDCurses cells, which differ from display columns after a wide char.
+            self._screen.touchwin()
+        except Exception:
+            pass
+        if self._cursor is not None:
+            row, col = self._cursor
+            shift = 0
+            if not display_columns:
+                cells = self._rows.get(row, [])
+                shift = sum(1 for char, _ in cells[:col] if char is self._WIDE_TAIL)
+            try:
+                self._screen.move(row, max(0, col - shift))
+            except Exception:
+                pass
+        self._screen.refresh()
+
+    def _emit(self, row: int, col: int, text: str, attr) -> None:
+        try:
+            self._screen.addstr(row, col, text, attr or 0)
+        except Exception:
+            # Writing the bottom-right cell raises in curses after drawing it.
+            pass
+
+
+def _toggle_language(state: dict[str, Any]) -> str:
+    current = tui_text.normalize_language(state.get("language"))
+    state["language"] = set_language("en" if current == "zh" else "zh")
+    try:
+        _save_preferences(state)
+    except (OSError, ValueError):
+        pass
+    return _t("language_changed")
 
 
 def _run_curses() -> None:  # pragma: no cover - interactive UI
     import curses
 
     def main(stdscr) -> None:
+        if sys.platform == 'win32' and isinstance(stdscr, getattr(curses, 'window', ())):
+            stdscr = _CellScreen(stdscr)
         curses.curs_set(0)
         stdscr.keypad(True)
         state: dict[str, Any] = {
@@ -971,8 +1253,10 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
             "agent": "web",
             "source_note": "",
             "revision_action": "derive",
+            "language": tui_text.DEFAULT_LANGUAGE,
         }
         state.update(_load_preferences())
+        state["language"] = set_language(state.get("language"))
         try:
             directories = load_directory_settings()
             directory_error = ''
@@ -1014,13 +1298,14 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
             ('notes_complete', 'Complete layered handout', 'toggle'),
             ('directories', 'DIRECTORIES', 'action'),
             ('lecture_date', 'Lecture Date YYYY-MM-DD', 'text'),
+            ('language', 'Language', 'language'),
         ]
-        # Keep existing action IDs while navigating in the visible field order.
-        focus_order = [*range(8), 24, *range(8, 24), 25, 26]
+        # Keep existing action IDs (new fields are appended); navigate in visible order.
+        focus_order = [*range(8), 24, *range(8, 14), 27, *range(14, 24), 25, 26]
         selected = 0
-        status = "Ready. Focus Source File, then drag an asset ZIP, audio, video, or UTF-8 TXT."
+        status = _t('status_ready')
         if not state['directories_configured']:
-            status = 'First use: DIRECTORIES -> confirm Input Dir / Output Dir -> SAVE. ' + directory_error
+            status = _t('status_first_use') + ' ' + directory_error
         device_values = ["auto", "mps", "cuda", "cpu"]
         agent_values, agent_labels = available_agent_choices()
         if state['agent'] not in agent_values:
@@ -1029,10 +1314,11 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
             state['device'] = 'auto'
 
         while True:
+            agent_labels = available_agent_choices()[1]
             height, width = stdscr.getmaxyx()
             if height < 30 or width < 94:
                 stdscr.erase()
-                _safe_add(stdscr, 1, 2, "Course Compiler ASCII TUI needs at least 94x30. Resize terminal; Q quits.")
+                _safe_add(stdscr, 1, 2, _t("too_small"))
                 stdscr.refresh()
                 if stdscr.getch() in (ord("q"), ord("Q")):
                     return
@@ -1040,78 +1326,93 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
 
             stdscr.erase()
             right = width - 2
-            _box(stdscr, 0, 0, height - 2, right, " COURSE COMPILER :: LOCAL ASSETS -> NOTES ")
+            _box(stdscr, 0, 0, height - 2, right, _t("title_main"))
             exporter = exporter_script_path()
-            exporter_name = exporter.name if exporter else "not found"
-            _panel_add(stdscr, 1, 2, right - 1, f"New course: ZIP/audio/video/TXT | Continue: W Workspace | Revise: N Note | Exporter: {exporter_name}")
-            _panel_add(stdscr, 2, 2, right - 1, "Tab/Arrows move | Enter edit/action | F5 run | Letters type in text fields; hotkeys on buttons/options")
-            _panel_add(stdscr, 3, 4, right - 3, 'Workspace: ' + str(_workspace_for_state(state) or '<W opens an existing course without a source file>'))
+            exporter_name = exporter.name if exporter else _t("exporter_missing")
+            _panel_add(stdscr, 1, 2, right - 1, _t("hint_top", exporter=exporter_name))
+            _panel_add(stdscr, 2, 2, right - 1, _t("hint_keys"))
+            _panel_add(stdscr, 3, 4, right - 3, _t('workspace_line', path=_workspace_for_state(state) or _t('workspace_none')))
 
-            _box(stdscr, 4, 2, 10, right - 2, " SOURCE / DESTINATION ")
+            _box(stdscr, 4, 2, 10, right - 2, _t("box_source"))
             labels = [
-                ("Source File", state["asset"] or "<drag ZIP, audio, video, or TXT here>"),
-                ("Output Dir", state["output_dir"]),
-                ("Course", state["title"] or "<auto from metadata/file name>"),
-                ("Lecture ID", state["lecture"] or "<auto from metadata/content>"),
+                (_t("label_asset"), state["asset"] or _t("placeholder_asset")),
+                (_t("label_output_dir"), state["output_dir"]),
+                (_t("label_title"), state["title"] or _t("placeholder_title")),
+                (_t("label_lecture"), state["lecture"] or _t("placeholder_lecture")),
             ]
             for idx, (label, value) in enumerate(labels):
                 attr = curses.A_REVERSE if selected == idx else 0
                 field_width = max(1, right - 3 - 4 - 17)
-                _panel_add(stdscr, 5 + idx, 4, right - 3, f"{label:<11} [ {_clip_columns(value, field_width)} ]", attr)
-            note_label = str(state.get("source_note") or "<none>")
-            _panel_add(stdscr, 9, 4, right - 3, f"[ N SUBMIT NOTE ] [ G {state['revision_action']} ] Note: {note_label}",
+                _panel_add(stdscr, 5 + idx, 4, right - 3, f"{_pad(label, 11)} [ {_clip_columns(value, field_width)} ]", attr)
+            note_label = str(state.get("source_note") or _t("none"))
+            _panel_add(stdscr, 9, 4, right - 3, _t("note_row", action=_t("revision_" + state['revision_action']), note=note_label),
                        curses.A_REVERSE if selected in {22, 23} else 0)
 
             mid = width // 2
-            _box(stdscr, 11, 2, 19, mid - 1, " DELIVERABLES ")
-            _panel_add(stdscr, 12, 5, mid - 2, 'Date: ' + (state['lecture_date'] or '<unknown; Enter YYYY-MM-DD>'),
+            _box(stdscr, 11, 2, 19, mid - 1, _t("box_deliverables"))
+            _panel_add(stdscr, 12, 5, mid - 2, _t('date_line', date=state['lecture_date'] or _t('date_unknown')),
                        curses.A_REVERSE if selected == 26 else 0)
             deliver_rows = [
-                (4, 13, "Full 完整课堂笔记", "notes_full"),
-                (5, 14, "Deep 图文教程讲义", "notes_deep"),
-                (6, 15, "Summary 速览讲义", "notes_summary"),
-                (7, 16, "Verbatim 清晰逐字稿", "verbatim_transcript"),
-                (24, 17, "Complete 可展开讲义", "notes_complete"),
+                (4, 13, _t("mode_full"), "notes_full"),
+                (5, 14, _t("mode_deep"), "notes_deep"),
+                (6, 15, _t("mode_summary"), "notes_summary"),
+                (7, 16, _t("mode_verbatim"), "verbatim_transcript"),
+                (24, 17, _t("mode_complete"), "notes_complete"),
             ]
             for idx, row, label, key in deliver_rows:
                 attr = curses.A_REVERSE if selected == idx else 0
                 _panel_add(stdscr, row, 5, mid - 2, f"{_checkbox(bool(state[key]))} {label}", attr)
 
-            _box(stdscr, 11, mid, 19, right - 2, " OPTIONS ")
+            _box(stdscr, 11, mid, 19, right - 2, _t("box_options"))
+            device_name = _t("device_auto") if state['device'] == 'auto' else state['device']
             option_lines = [
-                (8, 13, f"Reading format  < {state['format_profile']} >"),
-                (9, 14, f"{_checkbox(bool(state['use_slides']))} Use PPT as source"),
-                (10, 15, f"{_checkbox(bool(state['embed_slides']))} Embed PPT"),
-                (11, 16, f"{_checkbox(bool(state['allow_web']))} Allow web supplements"),
-                (12, 17, f"ASR device      < {state['device']} >"),
-                (13, 18, f"Agent           < {agent_labels[state['agent']]} >"),
+                (27, 12, f"{_pad(_t('option_language'), 16)}< {tui_text.LANGUAGE_NAMES[state['language']]} >"),
+                (8, 13, f"{_pad(_t('option_format'), 16)}< {_t('format_' + state['format_profile'])} >"),
+                (9, 14, f"{_checkbox(bool(state['use_slides']))} {_t('option_use_slides')}"),
+                (10, 15, f"{_checkbox(bool(state['embed_slides']))} {_t('option_embed_slides')}"),
+                (11, 16, f"{_checkbox(bool(state['allow_web']))} {_t('option_allow_web')}"),
+                (12, 17, f"{_pad(_t('option_device'), 16)}< {device_name} >"),
+                (13, 18, f"{_pad(_t('option_agent'), 16)}< {agent_labels[state['agent']]} >"),
             ]
             for idx, row, text in option_lines:
                 attr = curses.A_REVERSE if selected == idx else 0
                 _panel_add(stdscr, row, mid + 3, right - 3, text, attr)
 
-            _box(stdscr, 20, 2, 23, right - 2, " ACTIONS ")
-            view_label = "[ OPEN UPLOADS ]" if state["agent"] == "web" else "[ VIEW PROMPT ]"
-            actions = [(14, "[ RUN ]"), (15, "[ REFRESH PROMPT ]"), (16, view_label), (17, "[ QUIT ]")]
+            _box(stdscr, 20, 2, 23, right - 2, _t("box_actions"))
+            view_label = _t("button_uploads") if state["agent"] == "web" else _t("button_view_prompt")
+            actions = [(14, _t("button_run")), (15, _t("button_prompt")), (16, view_label), (17, _t("button_quit"))]
             col = 5
             for idx, text in actions:
                 attr = curses.A_REVERSE if selected == idx else 0
                 _panel_add(stdscr, 21, col, right - 3, text, attr)
-                col += len(text) + 3
+                col += _display_width(text) + 3
             col = 5
-            for idx, text in [(18, '[ W WORKSPACE ]'), (19, '[ R RESULTS ]'), (20, '[ I IMPORT RETURN ]'), (21, '[ H HTML ]')]:
+            for idx, text in [(18, _t('button_workspace')), (19, _t('button_results')), (20, _t('button_import')), (21, _t('button_html'))]:
                 _panel_add(stdscr, 22, col, right - 3, text, curses.A_REVERSE if selected == idx else 0)
-                col += len(text) + 2
+                col += _display_width(text) + 2
 
-            _box(stdscr, 24, 2, height - 3, right - 2, " STATUS ")
+            _box(stdscr, 24, 2, height - 3, right - 2, _t("box_status"))
             modes = selected_modes(state)
-            _panel_add(stdscr, 25, 4, right - 3, f"Deliverables: {', '.join(modes) if modes else '<none selected>'}  |  Agent: {agent_labels[state['agent']]}")
+            mode_names = ', '.join(_t('mode_short_' + mode) for mode in modes) if modes else _t('modes_none')
+            _panel_add(stdscr, 25, 4, right - 3, _t("status_summary", modes=mode_names, agent=agent_labels[state['agent']]))
             _panel_add(stdscr, 26, 4, right - 3, status)
-            _panel_add(stdscr, 27, 4, right - 3, '[ DIRECTORIES ] Input Dir: ' + state['input_dir'], curses.A_REVERSE if selected == 25 else 0)
+            _panel_add(stdscr, 27, 4, right - 3, _t('directories_row', path=state['input_dir']), curses.A_REVERSE if selected == 25 else 0)
             stdscr.refresh()
 
             key = stdscr.getch()
             field_key, label, kind = fields[selected]
+            label = _field_label(field_key, label)
+            if kind != 'text' and 32 <= key <= 126:
+                burst = _read_paste_burst(stdscr)
+                if burst:
+                    # A pasted/dropped path while a button has focus: load it as the
+                    # source file instead of firing one hotkey per character.
+                    selected = 0
+                    try:
+                        status = _commit_text_value(state, 'asset', chr(key) + burst) or status
+                    except Exception as exc:
+                        status = _t('status_invalid_field', label=_t('label_asset'), error=exc)
+                    continue
             if kind == 'text' and 32 <= key <= 126:
                 value, committed = _edit_value(stdscr, label, str(state[field_key]), initial=chr(key))
                 if committed:
@@ -1120,16 +1421,16 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
                         if message:
                             status = message
                     except Exception as exc:
-                        status = f'Invalid {label}: {exc}'
+                        status = _t('status_invalid_field', label=label, error=exc)
                 continue
             if key in (10, 13) and selected >= 18 and kind == 'action':
                 if selected == 25:
                     if _directory_dialog(stdscr, state):
-                        status = 'Directory defaults saved. Existing course folders were not moved.'
+                        status = _t('status_directories_saved')
                     continue
                 key = ord({18: 'w', 19: 'r', 20: 'i', 21: 'h', 22: 'n', 23: 'g'}[selected])
             if key in (ord('w'), ord('W')):
-                value, committed = _edit_value(stdscr, 'Existing lecture workspace (no ZIP needed)', str(_workspace_for_state(state) or ''))
+                value, committed = _edit_value(stdscr, _t('prompt_workspace'), str(_workspace_for_state(state) or ''))
                 if committed and value:
                     try:
                         _load_workspace_into_state(state, value)
@@ -1137,41 +1438,41 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
                             _save_preferences(state)
                         except (OSError, ValueError):
                             pass
-                        status = 'Workspace loaded. RUN continues the task; R Results; I imports returned Markdown.'
+                        status = _t('status_workspace_loaded')
                     except (OSError, ValueError) as exc:
-                        status = f'Cannot open workspace: {exc}'
+                        status = _t('status_workspace_failed', error=exc)
                 continue
             if key in (ord('r'), ord('R')):
                 try:
                     workspace = _workspace_for_state(state)
                     if workspace is None:
-                        raise ValueError('W: select a workspace first')
+                        raise ValueError(_t('error_select_workspace'))
                     _show_results(stdscr, workspace)
                 except (OSError, ValueError, RuntimeError) as exc:
-                    status = f'Results unavailable: {exc}'
+                    status = _t('status_results_unavailable', error=exc)
                 continue
             if key in (ord('i'), ord('I')):
                 try:
                     from .tasks import plan_task
                     workspace = _workspace_for_state(state)
                     if workspace is None:
-                        raise ValueError('W: select the intended workspace first')
+                        raise ValueError(_t('error_select_intended_workspace'))
                     plan = plan_task(workspace)
-                    mode, chosen = _edit_value(stdscr, 'Mode: deep / summary / full / verbatim / complete', next(iter(plan.pending), 'deep'))
+                    mode, chosen = _edit_value(stdscr, _t('prompt_import_mode'), next(iter(plan.pending), 'deep'))
                     if not chosen:
                         continue
-                    value, committed = _edit_value(stdscr, 'Returned Markdown for this task ' + plan.task_id, '')
+                    value, committed = _edit_value(stdscr, _t('prompt_import_file', task=plan.task_id), '')
                     if committed and value:
                         ok, status = _run_task(stdscr, state, prompt_only=False, command=[
                             'import-note', str(workspace), normalize_terminal_path(value), '--mode', mode, '--task-id', plan.task_id])
                         if ok:
                             _show_results(stdscr, workspace)
                 except (OSError, ValueError, RuntimeError) as exc:
-                    status = f'Import failed; old results retained: {exc}'
+                    status = _t('status_import_failed', error=exc)
                 continue
             if key in (ord('h'), ord('H')):
                 default = str(_workspace_for_state(state) or state.get('source_note') or '')
-                value, committed = _edit_value(stdscr, 'Markdown file or lecture folder', default)
+                value, committed = _edit_value(stdscr, _t('prompt_html_target'), default)
                 if committed and value.strip():
                     try:
                         from .html_export import export_html
@@ -1184,12 +1485,12 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
                         else:
                             outputs = export_html(target)
                             webbrowser.open(outputs[0].as_uri())
-                            status = f'Exported {len(outputs)} offline HTML file(s) beside Markdown: {outputs[0].name}'
+                            status = _t('status_html_done', count=len(outputs), name=outputs[0].name)
                     except (OSError, ValueError, RuntimeError) as exc:
-                        status = f'HTML export failed: {exc}'
+                        status = _t('status_html_failed', error=exc)
                 continue
             if key in (ord("n"), ord("N")):
-                value, committed = _edit_value(stdscr, "Existing note (.md/.txt; empty clears)", state["source_note"])
+                value, committed = _edit_value(stdscr, _t("prompt_note"), state["source_note"])
                 if committed:
                     state["source_note"] = normalize_terminal_path(value) if value.strip() else ""
                     state["clear_source_note"] = not bool(state["source_note"])
@@ -1202,13 +1503,13 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
                         workspace = _workspace_for_state(state)
                         if not state.get("asset") and (workspace is None or not workspace.exists()):
                             state["use_slides"] = False
-                    status = "Note submitted. G switches derive / illustrate. RUN reuses prepared materials."
+                    status = _t("status_note_submitted")
                 continue
             if key in (ord("g"), ord("G")):
                 state["revision_action"] = "illustrate" if state["revision_action"] == "derive" else "derive"
                 if state["revision_action"] == "illustrate":
                     state["use_slides"] = True
-                status = "Illustrate: select one mode and provide PPT; preserves existing text." if state["revision_action"] == "illustrate" else "Derive selected modes from submitted note."
+                status = _t("status_illustrate") if state["revision_action"] == "illustrate" else _t("status_derive")
                 continue
             if key in (ord("q"), ord("Q")):
                 try:
@@ -1239,6 +1540,8 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
                 elif kind == "agent":
                     pos = agent_values.index(state[field_key])
                     state[field_key] = agent_values[(pos + (1 if key == 261 else -1)) % len(agent_values)]
+                elif kind == "language":
+                    status = _toggle_language(state)
                 continue
             if key == ord(" "):
                 if kind == "toggle":
@@ -1253,6 +1556,8 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
                 elif kind == "agent":
                     pos = agent_values.index(state[field_key])
                     state[field_key] = agent_values[(pos + 1) % len(agent_values)]
+                elif kind == "language":
+                    status = _toggle_language(state)
                 continue
             if key not in (10, 13):
                 continue
@@ -1265,7 +1570,10 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
                         if message:
                             status = message
                     except Exception as exc:
-                        status = f"Invalid {label}: {exc}"
+                        status = _t("status_invalid_field", label=label, error=exc)
+                continue
+            if kind == "language":
+                status = _toggle_language(state)
                 continue
             if kind == "toggle":
                 state[field_key] = not bool(state[field_key])
@@ -1291,55 +1599,55 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
                 return
             if field_key == "view":
                 if not state.get("lecture"):
-                    status = "No lecture selected yet."
+                    status = _t("status_no_lecture")
                     continue
                 if state.get("agent") == "web":
                     workspace = _workspace_for_state(state)
                     exports = sorted(workspace.glob("handoff/*web-chat-*/Materials.txt")) if workspace else []
                     if not exports:
-                        status = "No web upload files yet. RUN or REFRESH PROMPT first."
+                        status = _t("status_no_uploads")
                     else:
                         try:
                             open_directory(exports[-1].parent)
-                            status = "Select Materials.txt and Slides.pdf (if present) in the opened folder."
+                            status = _t("status_uploads_opened")
                         except (OSError, subprocess.SubprocessError) as exc:
-                            status = f"Cannot open upload folder: {exc}"
+                            status = _t("status_uploads_open_failed", error=exc)
                     continue
                 path = friendly_artifact_paths(state)["prompt"]
                 if isinstance(path, Path) and path.is_file():
                     _view_text(stdscr, " PROMPT.md ", path)
                 else:
-                    status = f"Prompt not found: {path}"
+                    status = _t("status_prompt_missing", path=path)
                 continue
             if field_key in {"run", "prompt"}:
                 current_workspace = _workspace_for_state(state)
                 if not state.get('directories_configured') and (current_workspace is None or not current_workspace.is_dir()):
                     if not _directory_dialog(stdscr, state):
-                        status = 'Confirm directory defaults with DIRECTORIES before starting a task.'
+                        status = _t('status_confirm_directories')
                         continue
                 modes = selected_modes(state)
                 if not modes:
-                    status = "Select at least one deliverable."
+                    status = _t("status_select_mode")
                     continue
                 workspace = _workspace_for_state(state)
                 if field_key == "run" and not state.get("source_note") and (workspace is None or not workspace.is_dir()):
                     try:
                         status = _load_asset_into_state(state)
                     except Exception as exc:
-                        status = f"Cannot load source file: {exc}"
+                        status = _t("status_cannot_load", error=exc)
                         continue
                     if not state.get("title"):
-                        status = "Course title is missing; edit Course manually."
+                        status = _t("status_course_missing")
                         continue
                 if not state.get("lecture"):
-                    status = "Lecture ID is required."
+                    status = _t("status_lecture_required")
                     continue
                 if (field_key == "run" and not state.get("source_note")
                         and (workspace is None or not workspace.is_dir())
                         and state.get("source_kind") == "zhiyun_asset_zip"):
                     try:
                         if not _confirm_collection(stdscr, state):
-                            status = "Collection cancelled; original browser ZIP retained."
+                            status = _t("status_collection_cancelled")
                             continue
                     except (OSError, ValueError) as exc:
                         status = str(exc)
@@ -1355,12 +1663,12 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
                         paths = friendly_artifact_paths(state)
                         expected = paths.get("expected_notes", {})
                         if isinstance(expected, dict):
-                            status += " Targets: " + ", ".join(Path(path).name for path in expected.values())
+                            status += _t("status_targets", names=", ".join(Path(path).name for path in expected.values()))
                         workspace = _workspace_for_state(state)
                         if workspace is not None:
                             _show_results(stdscr, workspace)
                 except Exception as exc:
-                    status = f"Task failed: {exc}"
+                    status = _t("status_task_failed", error=exc)
 
     curses.wrapper(main)
 

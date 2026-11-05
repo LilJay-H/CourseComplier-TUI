@@ -7,10 +7,12 @@ import subprocess
 import sys
 import tempfile
 import hashlib
+from types import SimpleNamespace
 from pathlib import Path
 from typing import Any
 
 from . import claude, codex
+from .diagnosis import diagnose, run_forwarding
 from .base import AgentAvailability, AgentRunResult, expected_outputs, read_handoff, scope_pending
 from ..validation import validate_note_output, validate_workspace
 from ..workspace import read_json, sha256_file
@@ -68,10 +70,12 @@ def invoke_stage_process(root, snapshot, prompt, adapter, model, *, observation=
         command = adapter.build_command(task, model=model)
         from ..invocation_receipts import begin_observation, finish_observation
         started = begin_observation(command, snapshot, prompt, adapter.__name__.rsplit('.', 1)[-1], model)
-        completed = subprocess.run(command, input=prompt,
-            text=True, cwd=task, stdout=sys.stderr, stderr=sys.stderr,
-            encoding='utf-8', errors='replace', check=False)
+        returncode, tail = run_forwarding(command, input_text=prompt, cwd=task)
+        completed = SimpleNamespace(returncode=returncode)
         errors = audit_agent_run(task, snapshot, {RESULT}, root, formal_before)
+        hint = diagnose(adapter.__name__.rsplit('.', 1)[-1], returncode, tail)
+        if hint:
+            errors.append(hint)
         data = None
         if not errors:
             try:
@@ -195,9 +199,9 @@ def _run_cli_agent(
             (task / 'authoring').mkdir(exist_ok=True)
         from ..invocation_receipts import begin_observation, finish_observation, encoded as receipt_encoded
         started_observation = begin_observation(command, snapshot, prompt + CLI_FOOTER, name, model)
-        completed = subprocess.run(command, input=prompt + CLI_FOOTER,
-            text=True, cwd=task, stdout=sys.stderr, stderr=sys.stderr,
-            encoding='utf-8', errors='replace', check=False)
+        returncode, tail = run_forwarding(command, input_text=prompt + CLI_FOOTER, cwd=task)
+        completed = SimpleNamespace(returncode=returncode)
+        failure_hint = diagnose(name, returncode, tail)
         allowed = set(outputs.values()) | ({RECORD_PATH} if authoring_policy else set())
         if review_policy:
             allowed.add(editorial_review.RECORD_PATH)
@@ -232,7 +236,8 @@ def _run_cli_agent(
                 integrity_ok = False
                 record_save_failed = True
         if completed.returncode != 0:
-            errors.append(f'{name} exited with code {completed.returncode}')
+            errors.append(f'{name} exited with code {completed.returncode}'
+                          + (f'：{failure_hint}' if failure_hint else ''))
         verified_outputs = {}
         for mode, relative in outputs.items():
             if authoring_policy and authoring_policy['schema_version'] == 2:
@@ -388,4 +393,5 @@ def _run_cli_agent(
         outputs=all_outputs,
         validation_ok=not errors,
         validation_errors=tuple(errors),
+        failure_hint=failure_hint,
     )

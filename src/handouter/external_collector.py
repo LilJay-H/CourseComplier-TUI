@@ -52,6 +52,9 @@ def configuration_path() -> Path:
 def _regular(path: Path) -> Path:
     _check_config_path(path)
     if not path.is_absolute() or not path.is_file():
+        if path.is_absolute() and not path.exists():
+            raise ValueError(f"COLLECTOR_PATH: 采集器文件不存在：{path}。"
+                             "如果移动或重装过插件，请重新运行 collector-configure")
         raise ValueError("COLLECTOR_PATH: 请选择独立安装的采集器普通文件")
     return path
 
@@ -187,8 +190,17 @@ def _invoke(config: dict, method: str, params: dict, *, progress=None, timeout=3
                 if frame.get("stage") not in _STAGES or count > 1000:
                     raise ValueError("COLLECTOR_PROTOCOL: 插件进度无效")
                 if progress:
-                    progress("本机采集", 0, {"preparing":"准备材料", "downloading":"下载媒体", "packaging":"生成标准包", "publishing":"发布标准包"}[frame["stage"]])
+                    # The plugin reports stages only; place each stage on the bar so it
+                    # visibly advances, and say that a large download is slow.
+                    percent, detail = {"preparing": (5, "准备材料"),
+                                       "downloading": (10, "下载媒体（视频较大，可能需要几分钟，期间进度不变）"),
+                                       "packaging": (80, "生成标准包"), "publishing": (95, "发布标准包")}[frame["stage"]]
+                    progress("本机采集", percent, detail)
             elif frame.get("type") == "error":
+                # Only known codes map to fixed local wording; plugin messages are never echoed.
+                if frame.get("code") == "COLLECTOR_NO_MEDIA":
+                    raise ValueError("COLLECTOR_NO_MEDIA: 资料包里没有回放视频地址，通常是网页没加载完就导出了；"
+                                     "请打开该课的回放页，等视频和 PPT 加载完成后重新导出；原件已保留")
                 raise ValueError("COLLECTOR_FAILED: 采集未完成，请检查授权、媒体域名和插件；原件已保留")
             elif frame.get("type") == {"identity":"identity", "inspect":"inspection", "convert":"result"}[method]:
                 terminal = frame
