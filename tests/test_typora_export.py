@@ -115,7 +115,7 @@ class TyporaExportTests(unittest.TestCase):
             first = export_typora(note)
             second = export_typora(note)
             self.assertNotEqual(first, second)
-            self.assertEqual(note.read_text(), source)
+            self.assertEqual(note.read_text(encoding="utf-8"), source)
             self.assertEqual((root / 'one.png').read_bytes(), IMAGE)
             self.assertTrue(first.name.endswith('.typora.md'))
             self.assertTrue(second.name.endswith('.typora-001.md'))
@@ -157,7 +157,7 @@ class TyporaExportTests(unittest.TestCase):
             note.write_text(figure('../slides/images/one.png'), encoding='utf-8')
             result = export_typora(note)
             self.assertEqual(result.parent.resolve(), note.parent.resolve())
-            self.assertIn('../slides/images/one.png', result.read_text())
+            self.assertIn('../slides/images/one.png', result.read_text(encoding="utf-8"))
 
 
 if __name__ == '__main__':

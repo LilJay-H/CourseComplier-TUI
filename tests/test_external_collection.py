@@ -40,7 +40,7 @@ elif m=='convert':
   a.writestr('handouter-input.json',json.dumps({{'schema_version':1,'lecture':{{'course_title':'Synthetic course','lecture_date':None}},'transcript':{{'path':'transcript.txt'}}}}))
   a.writestr('transcript.txt','Synthetic lesson')
  print(json.dumps({{'type':'result','output_path':p['output_path']}}))
-''')
+''', encoding="utf-8")
         self.plugin.chmod(0o700)
         self.digest = hashlib.sha256(self.plugin.read_bytes()).hexdigest()
         self.path_patch = patch.object(bridge, "configuration_path", return_value=self.configuration)
@@ -73,7 +73,7 @@ elif m=='convert':
 
     def test_changed_tool_is_rejected_before_execution(self):
         self.configure()
-        self.plugin.write_text("changed")
+        self.plugin.write_text("changed", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "HASH_MISMATCH"):
             bridge.inspect_browser_export(self.source)
 
@@ -111,14 +111,14 @@ import pathlib,subprocess,sys,time
 child=subprocess.Popen([sys.executable,'-c','import time; time.sleep(30)'])
 pathlib.Path({str(pid_path)!r}).write_text(str(child.pid))
 time.sleep(30)
-''')
+''', encoding="utf-8")
         self.plugin.chmod(0o700)
         config = {"executable": str(self.plugin), "sha256": hashlib.sha256(self.plugin.read_bytes()).hexdigest(),
                   "tool_id": "org.example.fixture", "exporter_script": None}
         with self.assertRaisesRegex(ValueError, "COLLECTOR_TIMEOUT"):
             bridge._invoke(config, "inspect", {}, timeout=1)
         self.assertTrue(pid_path.exists())
-        pid = int(pid_path.read_text())
+        pid = int(pid_path.read_text(encoding="utf-8"))
         deadline = time.monotonic() + 3
         while time.monotonic() < deadline:
             state = subprocess.run(["ps", "-p", str(pid), "-o", "stat="], capture_output=True, text=True)
@@ -149,7 +149,7 @@ time.sleep(30)
         from handouter.tasks import plan_task
         self.configure()
         skill = self.root / "SKILL.md"
-        skill.write_text("# Synthetic test skill\nUse only supplied evidence.\n")
+        skill.write_text("# Synthetic test skill\nUse only supplied evidence.\n", encoding="utf-8")
         with patch("handouter.importers.MAX_ZIP_BYTES", 1), \
                 patch("handouter.service.import_local_asset_zip", side_effect=AssertionError("legacy bounded importer used")), \
                 patch.object(zipfile.ZipFile, "read", side_effect=AssertionError("whole ZIP member read")):
@@ -158,7 +158,7 @@ time.sleep(30)
                 use_slides_as_source=False, allowed_media_hosts=["media.example.test"])
         workspace = result.workspace
         fingerprint = hashlib.sha256(self.source.read_bytes()).hexdigest()
-        manifest = json.loads((workspace / "manifest.json").read_text())
+        manifest = json.loads((workspace / "manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["input_fingerprint"], fingerprint)
         self.assertNotEqual(plan_task(workspace, input_fingerprint=fingerprint).action, "refresh_required")
 
@@ -169,7 +169,7 @@ time.sleep(30)
             archive.writestr("opaque.dat", "synthetic browser data")
         self.configure()
         skill = self.root / "SKILL.md"
-        skill.write_text("# Synthetic test skill\nUse only supplied evidence.\n")
+        skill.write_text("# Synthetic test skill\nUse only supplied evidence.\n", encoding="utf-8")
         args = ["run", "--asset", str(self.source), "--allowed-media-host", "media.example.test",
                 "--output-dir", str(self.root / "out"), "--lecture-id", "repeat-course",
                 "--course-title", "Synthetic course", "--agent", "manual", "--ignore-slides",
@@ -184,7 +184,7 @@ time.sleep(30)
         self.assertEqual(build.call_count, 1)
 
     def test_child_error_never_returns_its_message(self):
-        self.plugin.write_text(f'#!{sys.executable}\nimport json\nprint(json.dumps({{"type":"error","code":"ERR","message":"auth_key=SYNTHETIC_SECRET"}}))\n')
+        self.plugin.write_text(f'#!{sys.executable}\nimport json\nprint(json.dumps({{"type":"error","code":"ERR","message":"auth_key=SYNTHETIC_SECRET"}}))\n', encoding="utf-8")
         self.plugin.chmod(0o700)
         config = {"executable": str(self.plugin), "sha256": hashlib.sha256(self.plugin.read_bytes()).hexdigest(),
                   "tool_id": "org.example.fixture", "exporter_script": None}
@@ -192,8 +192,17 @@ time.sleep(30)
             bridge._invoke(config, "inspect", {"source_path": str(self.source)})
         self.assertNotIn("SYNTHETIC_SECRET", str(raised.exception))
 
+    def test_missing_media_error_gets_actionable_fixed_message(self):
+        self.plugin.write_text(f'#!{sys.executable}\nimport json\nprint(json.dumps({{"type":"error","code":"COLLECTOR_NO_MEDIA","message":"auth_key=SYNTHETIC_SECRET"}}))\n', encoding="utf-8")
+        self.plugin.chmod(0o700)
+        config = {"executable": str(self.plugin), "sha256": hashlib.sha256(self.plugin.read_bytes()).hexdigest(),
+                  "tool_id": "org.example.fixture", "exporter_script": None}
+        with self.assertRaisesRegex(ValueError, "COLLECTOR_NO_MEDIA: .*重新导出") as raised:
+            bridge._invoke(config, "inspect", {"source_path": str(self.source)})
+        self.assertNotIn("SYNTHETIC_SECRET", str(raised.exception))
+
     def test_oversized_frame_is_rejected(self):
-        self.plugin.write_text(f'#!{sys.executable}\nprint("x"*20000)\n')
+        self.plugin.write_text(f'#!{sys.executable}\nprint("x"*20000)\n', encoding="utf-8")
         self.plugin.chmod(0o700)
         config = {"executable": str(self.plugin), "sha256": hashlib.sha256(self.plugin.read_bytes()).hexdigest(),
                   "tool_id": "org.example.fixture", "exporter_script": None}

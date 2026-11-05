@@ -66,15 +66,15 @@ class LocalAssetInputTests(unittest.TestCase):
                 course_title="Portable Course", asset_zip=archive, use_slides_as_source=True)
         audio.assert_not_called()
         media.assert_not_called()
-        workspace_manifest = json.loads((result.workspace / "manifest.json").read_text())
+        workspace_manifest = json.loads((result.workspace / "manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(workspace_manifest["source_type"], "local_asset_package")
         self.assertEqual(workspace_manifest["transcript"]["origin"], "provided_transcript")
-        self.assertEqual((result.workspace / "transcript/transcript.txt").read_text(), "用户提供的转写。")
+        self.assertEqual((result.workspace / "transcript/transcript.txt").read_text(encoding="utf-8"), "用户提供的转写。")
         self.assertEqual((result.workspace / "audio/source.m4a").read_bytes(), b"synthetic evidence audio")
         self.assertTrue((result.workspace / "slides/images/slide_001.png").is_file())
         from handouter.agents.manual import selected_files
         self.assertNotIn("audio/source.m4a", selected_files(result.workspace,
-            json.loads((result.workspace / "handoff/sources.json").read_text())))
+            json.loads((result.workspace / "handoff/sources.json").read_text(encoding="utf-8"))))
 
     def test_audio_only_package_dispatches_to_existing_audio_pipeline(self):
         manifest = {"schema_version": 1, "audio": {"path": "audio/lesson.m4a"}}
@@ -121,7 +121,7 @@ class LocalAssetInputTests(unittest.TestCase):
 
     def test_cli_run_accepts_direct_transcript_without_asr(self):
         transcript = self.root / "lecture.txt"
-        transcript.write_text("direct transcript")
+        transcript.write_text("direct transcript", encoding="utf-8")
         parser = cli._build_parser()
         args = parser.parse_args(["run", "--transcript", str(transcript), "--output-dir",
             str(self.root / "out"),

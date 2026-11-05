@@ -42,7 +42,7 @@ class StructureRegressionTests(unittest.TestCase):
                     note.write_text(text, encoding="utf-8")
                     with self.assertRaises(ValueError):
                         render_note(note, root)
-                    self.assertEqual(note.read_text(), text)
+                    self.assertEqual(note.read_text(encoding="utf-8"), text)
 
     def test_valid_nested_layout_and_literal_code_are_preserved(self):
         text = '''<div class="ppt-grid"><figure><figcaption>甲</figcaption></figure><figure><figcaption>乙</figcaption></figure></div>

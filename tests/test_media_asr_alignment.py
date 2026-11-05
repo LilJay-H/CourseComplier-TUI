@@ -67,6 +67,30 @@ class ASRPersistenceTests(unittest.TestCase):
             self.assertTrue(result.raw_path.is_file())
             self.assertEqual(list(root.glob('.result.tmp-*')), [])
 
+    def test_out_of_memory_becomes_plain_hint_and_leaves_no_staging(self):
+        from types import ModuleType
+        from handouter.asr import transcribe_sensevoice
+        from handouter.sensevoice_normalize import ASRError
+        modules = {name: ModuleType(name) for name in
+                   ('funasr', 'funasr.utils', 'funasr.utils.postprocess_utils')}
+        class Model:
+            def __init__(self, **kwargs): pass
+            def generate(self, **kwargs):
+                raise RuntimeError('[enforce fail at alloc_cpu.cpp:117] data. DefaultCPUAllocator: '
+                                   'not enough memory: you tried to allocate 4064256 bytes.')
+        modules['funasr'].AutoModel = Model
+        modules['funasr.utils.postprocess_utils'].rich_transcription_postprocess = lambda text: text
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            audio = root / 'synthetic.wav'
+            audio.write_bytes(b'synthetic backend input')
+            with patch.dict(sys.modules, modules), self.assertRaises(ASRError) as caught:
+                transcribe_sensevoice(audio, root / 'result', device='cpu')
+            self.assertIn('内存不足', str(caught.exception))
+            self.assertNotIn('alloc_cpu', str(caught.exception))
+            self.assertEqual(list(root.glob('.result.tmp-*')), [])
+            self.assertFalse((root / 'result').exists())
+
 
 class ASRNormalizationTests(unittest.TestCase):
     def test_sentence_info_becomes_timed_segments(self):
@@ -161,8 +185,8 @@ class StructuredWorkspaceTests(unittest.TestCase):
             mode="deep",
             skill_path=self.skill,
         )
-        manifest = json.loads((result.workspace / "manifest.json").read_text())
-        sources = json.loads((result.workspace / "handoff" / "sources.json").read_text())
+        manifest = json.loads((result.workspace / "manifest.json").read_text(encoding="utf-8"))
+        sources = json.loads((result.workspace / "handoff" / "sources.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["transcript"]["timestamp_kind"], "sentence_or_vad")
         self.assertEqual(manifest["transcript"]["segment_count"], 2)
         self.assertEqual(manifest["slides"]["alignment_path"], "slides/alignment.json")
@@ -239,7 +263,7 @@ class ServiceBuildTests(unittest.TestCase):
             self.assertTrue(result.asr.raw_path.is_file())
             self.assertTrue(result.asr.segments_path.is_file())
             self.assertTrue((result.prepare.workspace / "audio" / "source.m4a").is_file())
-            manifest = json.loads((result.prepare.workspace / "manifest.json").read_text())
+            manifest = json.loads((result.prepare.workspace / "manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["source_type"], "local_audio_asr")
             self.assertTrue(validate_workspace(result.prepare.workspace).ok)
 

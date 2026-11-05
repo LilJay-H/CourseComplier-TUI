@@ -70,6 +70,25 @@ class ProductDirectoryTests(unittest.TestCase):
         missing_dir = self.root / "does-not-exist"
         self.assertEqual(resolve_asset_zip(missing_dir, asset.resolve()), asset.resolve())
 
+    def test_cli_relative_source_prefers_current_directory(self):
+        from handouter.product import resolve_input_source
+        transcript = self.root / "lecture.txt"
+        transcript.write_text("课程内容。", encoding="utf-8")
+        missing_dir = self.root / "does-not-exist"
+        with contextlib.chdir(self.root):
+            self.assertEqual(resolve_input_source(missing_dir, "lecture.txt", cwd_first=True), transcript.resolve())
+            relative_zip = self.make_zip("rel.zip")
+            self.assertEqual(resolve_asset_zip(missing_dir, Path("input") / "rel.zip", cwd_first=True),
+                             relative_zip.resolve())
+            with self.assertRaises(NotADirectoryError):
+                resolve_input_source(missing_dir, "lecture.txt")
+            with self.assertRaises(FileNotFoundError):
+                resolve_input_source(missing_dir, "absent.txt", cwd_first=True)
+        # Without a current-directory match the input directory is still used.
+        inside = self.input / "inside.txt"
+        inside.write_text("课程内容。", encoding="utf-8")
+        self.assertEqual(resolve_input_source(self.input, "inside.txt", cwd_first=True), inside.resolve())
+
     def _make_transcript(self) -> Path:
         path = self.root / "lecture.txt"
         path.write_text("课程内容。", encoding="utf-8")
@@ -141,8 +160,13 @@ class ProductDirectoryTests(unittest.TestCase):
             AgentAvailability("codex", True, "/codex", "cli"),
             AgentAvailability("claude", False, None, "cli"),
         ]
-        with patch("handouter.tui.available_cli_agents", return_value=fake):
-            values, labels = available_agent_choices()
+        from handouter import tui
+        tui.set_language("en")
+        try:
+            with patch("handouter.tui.available_cli_agents", return_value=fake):
+                values, labels = available_agent_choices()
+        finally:
+            tui.set_language(None)
         self.assertEqual(values, ["web", "manual", "codex"])
         self.assertEqual(labels["manual"], "GUI handoff")
         self.assertEqual(labels["codex"], "Codex CLI")
@@ -165,12 +189,22 @@ class ProductDirectoryTests(unittest.TestCase):
         self.assertEqual(args[0], "run")
         self.assertNotIn("--input-dir", args)
         self.assertIn("--asset", args)
-        self.assertIn("/Users/test/Downloads/course.zip", args)
+        # The asset path is normalized to native separators (backslashes on Windows).
+        self.assertIn(str(Path("/Users/test/Downloads/course.zip")), args)
         self.assertIn("--output-dir", args)
         self.assertIn("/out", args)
         self.assertIn("--format-profile", args)
         self.assertIn("clean", args)
 
+    @unittest.skipUnless(sys.platform == "win32", "Windows 路径语义")
+    def test_dragged_windows_paths_are_normalized(self):
+        expected = r"C:\Users\test\Downloads\课程 01.zip"
+        self.assertEqual(normalize_dropped_path('"C:\\Users\\test\\Downloads\\课程 01.zip"'), expected)
+        self.assertEqual(normalize_dropped_path("'C:\\Users\\test\\Downloads\\课程 01.zip'"), expected)
+        self.assertEqual(normalize_dropped_path("file:///C:/Users/test/Downloads/%E8%AF%BE%E7%A8%8B%2001.zip"), expected)
+        self.assertEqual(normalize_dropped_path("C:\\Users\\test\\Downloads\\课程 01.zip "), expected)
+
+    @unittest.skipIf(sys.platform == "win32", "POSIX shell 转义；Windows 上反斜杠是路径分隔符")
     def test_dragged_paths_are_normalized(self):
         self.assertEqual(
             normalize_dropped_path(r"/Users/test/Downloads/My\ Course.zip"),
@@ -288,7 +322,7 @@ class PromptFormatTests(unittest.TestCase):
     def test_clean_full_uses_progressive_skill_modules(self):
         result = self.prepare("full", "clean")
         prompt = (result.workspace / "handoff" / "PROMPT.md").read_text(encoding="utf-8")
-        sources = json.loads((result.workspace / "handoff" / "sources.json").read_text())
+        sources = json.loads((result.workspace / "handoff" / "sources.json").read_text(encoding="utf-8"))
         self.assertEqual(sources["options"]["format_profile"], "clean")
         self.assertIn("handoff/skill/references/modes/full.md", sources["skill"]["modules"])
         self.assertIn("handoff/skill/references/formats/clean.md", sources["skill"]["modules"])
@@ -528,7 +562,7 @@ class PromptFormatTests(unittest.TestCase):
             "embed_slides": False,
             "allow_web": False,
         })
-        self.assertEqual(args[:2], ["prompt", "/out/lecture-01"])
+        self.assertEqual(args[:2], ["prompt", str(Path("/out").resolve() / "lecture-01")])
         self.assertNotIn("--input-dir", args)
         self.assertNotIn("--asset", args)
 

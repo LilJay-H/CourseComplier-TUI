@@ -37,25 +37,25 @@ class NoteRevisionTests(unittest.TestCase):
     def test_existing_workspace_reuses_evidence_and_embeds_explicit_snapshot_in_all_adapters(self):
         root = self.workspace()
         before = (root / "transcript/transcript.txt").read_bytes()
-        (root / "notes/deep-001.md").write_text("unselected old note")
+        (root / "notes/deep-001.md").write_text("unselected old note", encoding="utf-8")
         result = refresh_handoff(root, modes=["summary"], source_note=self.note)
-        sources = json.loads((root / "handoff/sources.json").read_text())
-        self.assertEqual(sources["revision"]["text"], self.note.read_text())
+        sources = json.loads((root / "handoff/sources.json").read_text(encoding="utf-8"))
+        self.assertEqual(sources["revision"]["text"], self.note.read_text(encoding="utf-8"))
         self.assertEqual(sources["revision"]["basis"], "note_with_original_materials")
-        prompt = (root / "handoff/PROMPT.md").read_text()
+        prompt = (root / "handoff/PROMPT.md").read_text(encoding="utf-8")
         self.assertIn("用户提交的已有讲义", prompt)
         self.assertEqual((root / "transcript/transcript.txt").read_bytes(), before)
         self.assertTrue(result.archived_prompt.exists())
-        web = create_web_handoff(root).materials.read_text()
+        web = create_web_handoff(root).materials.read_text(encoding="utf-8")
         self.assertIn("最后一段", web)
         self.assertNotIn("unselected old note", web)
         with zipfile.ZipFile(create_manual_bundle(root).bundle) as archive:
             self.assertEqual(json.loads(archive.read("handoff/sources.json"))["revision"], sources["revision"])
-        self.note.write_text("changed externally")
+        self.note.write_text("changed externally", encoding="utf-8")
         refresh_handoff(root, modes=["full"])
-        self.assertEqual(json.loads((root / "handoff/sources.json").read_text())["revision"], sources["revision"])
+        self.assertEqual(json.loads((root / "handoff/sources.json").read_text(encoding="utf-8"))["revision"], sources["revision"])
         refresh_handoff(root, clear_source_note=True)
-        self.assertIsNone(json.loads((root / "handoff/sources.json").read_text())["revision"])
+        self.assertIsNone(json.loads((root / "handoff/sources.json").read_text(encoding="utf-8"))["revision"])
 
     def test_note_only_cli_never_downloads_or_transcribes_and_marks_evidence_limit(self):
         before = self.note.read_bytes()
@@ -69,8 +69,8 @@ class NoteRevisionTests(unittest.TestCase):
             asr.assert_not_called()
         payload = json.loads(stream.getvalue())
         root = Path(payload["workspace"])
-        self.assertEqual(json.loads((root / "manifest.json").read_text())["source_type"], "provided_note")
-        self.assertIn("不是 ASR 或课堂原文", Path(payload["agent_interaction"]["upload_files"][0]).read_text())
+        self.assertEqual(json.loads((root / "manifest.json").read_text(encoding="utf-8"))["source_type"], "provided_note")
+        self.assertIn("不是 ASR 或课堂原文", Path(payload["agent_interaction"]["upload_files"][0]).read_text(encoding="utf-8"))
         self.assertEqual(self.note.read_bytes(), before)
         with self.assertRaises(ValueError):
             refresh_handoff(root, modes=["verbatim"])
@@ -93,12 +93,12 @@ class NoteRevisionTests(unittest.TestCase):
                                transcript=self.transcript, slides_dir=slides).workspace
         result = refresh_handoff(root, source_note=self.note, revision_action="illustrate", modes=["deep"])
         self.assertTrue(result.handoff.embed_slides)
-        self.assertIn("不要顺便摘要、扩写或重写正文", (root / "handoff/PROMPT.md").read_text())
+        self.assertIn("不要顺便摘要、扩写或重写正文", (root / "handoff/PROMPT.md").read_text(encoding="utf-8"))
         self.assertTrue(create_web_handoff(root).slides.is_file())
         output = root / result.handoff.output_path
-        output.write_text("# Rewritten\n\nDifferent content.")
+        output.write_text("# Rewritten\n\nDifferent content.", encoding="utf-8")
         self.assertTrue(any("原讲义正文" in error for error in validate_note_output(root).errors))
-        output.write_text(self.note.read_text())
+        output.write_text(self.note.read_text(encoding="utf-8"), encoding="utf-8")
         self.assertFalse(any("原讲义正文" in error for error in validate_note_output(root).errors))
         with self.assertRaisesRegex(ValueError, "一个"):
             refresh_handoff(root, modes=["deep", "summary"])
@@ -112,17 +112,24 @@ class NoteRevisionTests(unittest.TestCase):
     def test_note_only_uses_one_snapshot_even_when_original_changes_after_read(self):
         revision = read_revision_note(self.note, note_only=True)
         def read_then_change(*args, **kwargs):
-            self.note.write_text("Changed after snapshot")
+            self.note.write_text("Changed after snapshot", encoding="utf-8")
             return revision
         with patch("handouter.cli.read_revision_note", side_effect=read_then_change), contextlib.redirect_stdout(io.StringIO()):
             code = cli.main(["revise", str(self.note), "--lecture-id", "snapshot", "--output-dir", str(self.root / "out"), "--agent", "none"])
         self.assertEqual(code, 0)
         from handouter.organization import find_workspace
         workspace = find_workspace(self.root / 'out', 'snapshot')
-        self.assertEqual((workspace / 'transcript/transcript.txt').read_text(), revision['text'])
+        self.assertEqual((workspace / 'transcript/transcript.txt').read_text(encoding="utf-8"), revision['text'])
+
+    def test_crlf_note_is_normalized_and_hash_covers_original_bytes(self):
+        raw = "# 深度讲义\r\n\r\n结论。\r旧 Mac 换行\r\n".encode("utf-8")
+        self.note.write_bytes(raw)
+        revision = read_revision_note(self.note)
+        self.assertEqual(revision["text"], "# 深度讲义\n\n结论。\n旧 Mac 换行\n")
+        self.assertEqual(revision["sha256"], __import__("hashlib").sha256(raw).hexdigest())
 
     def test_secret_and_unsupported_note_are_rejected(self):
-        self.note.write_text("auth_key=synthetic-test-secret")
+        self.note.write_text("auth_key=synthetic-test-secret", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "凭证"):
             read_revision_note(self.note)
         pdf = self.root / "note.pdf"

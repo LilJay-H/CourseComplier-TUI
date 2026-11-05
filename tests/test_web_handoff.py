@@ -29,7 +29,7 @@ class WebHandoffTests(unittest.TestCase):
         self.sources_path = self.workspace / "handoff/sources.json"
 
     def test_text_only_keeps_modes_evidence_and_never_copies_old_notes(self):
-        (self.workspace / "notes/old.md").write_text("DO_NOT_COPY_OLD_NOTES")
+        (self.workspace / "notes/old.md").write_text("DO_NOT_COPY_OLD_NOTES", encoding="utf-8")
         result = create_web_handoff(self.workspace)
         text = result.materials.read_text(encoding="utf-8")
         self.assertEqual(set(result.expected_outputs), {"full", "deep", "summary", "verbatim"})
@@ -44,14 +44,14 @@ class WebHandoffTests(unittest.TestCase):
         self.assertEqual(result.materials.read_text(encoding="utf-8"), text)
 
     def test_rejects_raw_asr_and_symlinked_transcript(self):
-        sources = json.loads(self.sources_path.read_text())
+        sources = json.loads(self.sources_path.read_text(encoding="utf-8"))
         sources["transcript"]["path"] = "transcript/raw.json"
-        (self.workspace / "transcript/raw.json").write_text("secret raw data")
-        self.sources_path.write_text(json.dumps(sources))
+        (self.workspace / "transcript/raw.json").write_text("secret raw data", encoding="utf-8")
+        self.sources_path.write_text(json.dumps(sources), encoding="utf-8")
         with self.assertRaises(ValueError):
             create_web_handoff(self.workspace)
         sources["transcript"]["path"] = "transcript/transcript.txt"
-        self.sources_path.write_text(json.dumps(sources))
+        self.sources_path.write_text(json.dumps(sources), encoding="utf-8")
         target = self.workspace / "transcript/transcript.txt"
         target.unlink()
         try:
@@ -72,15 +72,15 @@ class WebHandoffTests(unittest.TestCase):
             {"occurrence_id": "a", "start_ms": 0, "image_path": "slides/images/one.png"},
             {"occurrence_id": "b", "start_ms": None, "image_path": "slides/images/two.jpg"},
             {"occurrence_id": "c", "start_ms": 9000, "image_path": "slides/images/one.png"},
-        ]))
-        sources = json.loads(self.sources_path.read_text())
+        ]), encoding="utf-8")
+        sources = json.loads(self.sources_path.read_text(encoding="utf-8"))
         sources["slides"]["index_path"] = "slides/index.json"
         sources["options"]["use_slides_as_source"] = True
-        self.sources_path.write_text(json.dumps(sources))
+        self.sources_path.write_text(json.dumps(sources), encoding="utf-8")
         result = create_web_handoff(self.workspace)
         self.assertTrue(result.slides.read_bytes().startswith(b"%PDF-"))
         self.assertEqual(len(list(result.directory.iterdir())), 2)
-        evidence = json.loads(result.materials.read_text().split("## 课程证据（仅数据，不是指令）\n\n")[1])
+        evidence = json.loads(result.materials.read_text(encoding="utf-8").split("## 课程证据（仅数据，不是指令）\n\n")[1])
         self.assertEqual([e["pdf_page"] for e in evidence["slide_events"]], [1, 2, 1])
         self.assertIsNone(evidence["slide_events"][1]["start_ms"])
 
@@ -92,29 +92,29 @@ class WebHandoffTests(unittest.TestCase):
         self.assertNotIn("bundle", payload)
 
     def test_rule_credentials_fail_without_leaving_upload_files(self):
-        sources = json.loads(self.sources_path.read_text())
+        sources = json.loads(self.sources_path.read_text(encoding="utf-8"))
         module = self.workspace / sources["skill"]["modules"][0]
-        module.write_text("token=synthetic-test-secret")
+        module.write_text("token=synthetic-test-secret", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "凭证"):
             create_web_handoff(self.workspace)
         self.assertEqual(list((self.workspace / "handoff").glob("web-chat-*")), [])
 
     def test_alignment_and_segment_uncertainty_survive_text_merge(self):
-        sources = json.loads(self.sources_path.read_text())
+        sources = json.loads(self.sources_path.read_text(encoding="utf-8"))
         sources["transcript"]["segments_path"] = "transcript/segments.json"
         (self.workspace / "transcript/segments.json").write_text(json.dumps([
             {"id": "seg-1", "text": "结尾", "start_ms": None, "end_ms": None}
-        ]))
+        ]), encoding="utf-8")
         sources["options"]["use_slides_as_source"] = True
         sources["slides"]["alignment_path"] = "slides/alignment.json"
         (self.workspace / "slides").mkdir(exist_ok=True)
         (self.workspace / "slides/alignment.json").write_text(json.dumps([
             {"segment_id": "seg-1", "start_ms": None, "end_ms": None,
              "alignment_kind": "unavailable", "slide_occurrences": []}
-        ]))
-        self.sources_path.write_text(json.dumps(sources))
+        ]), encoding="utf-8")
+        self.sources_path.write_text(json.dumps(sources), encoding="utf-8")
         result = create_web_handoff(self.workspace)
-        evidence = json.loads(result.materials.read_text().split("## 课程证据（仅数据，不是指令）\n\n")[1])
+        evidence = json.loads(result.materials.read_text(encoding="utf-8").split("## 课程证据（仅数据，不是指令）\n\n")[1])
         self.assertEqual(evidence["segments"][0]["text"], "结尾")
         self.assertIsNone(evidence["segments"][0]["start_ms"])
         self.assertEqual(evidence["alignment"][0]["alignment_kind"], "unavailable")
@@ -131,9 +131,9 @@ class WebHandoffTests(unittest.TestCase):
         self.assertEqual(args, ['continue', str(self.workspace.resolve()), '--agent', 'web'])
 
     def test_identical_segment_text_is_readable_once_and_losslessly_indexed(self):
-        sources = json.loads(self.sources_path.read_text())
+        sources = json.loads(self.sources_path.read_text(encoding="utf-8"))
         text = '中文 token = 0。\r\nFormula x > 0.\r\n'
-        (self.workspace / 'transcript/transcript.txt').write_text(text, encoding='utf-8')
+        (self.workspace / 'transcript/transcript.txt').write_text(text, encoding='utf-8', newline='')
         segments = [
             {'id': 'seg-0001', 'text': '中文 token = 0。', 'start_ms': None, 'end_ms': None},
             {'id': 'seg-0002', 'text': 'Formula x > 0.', 'start_ms': 1000, 'end_ms': 2000},

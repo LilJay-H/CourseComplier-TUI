@@ -107,14 +107,90 @@ class TUIDirectoryTests(unittest.TestCase):
         self.assertTrue(state['directories_configured'])
         self.assertTrue(Path(state['input_dir']).is_dir())
 
+    def test_directory_dialog_typing_replaces_field(self):
+        screen = MagicMock()
+        screen.getmaxyx.return_value = (32, 112)
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        new_input = str(Path(temporary.name) / 'typed')
+        state = {'input_dir': str(Path(temporary.name) / 'in'), 'output_dir': str(Path(temporary.name) / 'out')}
+        loaded = {'input_dir': state['input_dir'], 'output_dir': state['output_dir'], 'course_output_dirs': {}, 'configured': False}
+        with patch.object(tui, 'load_directory_settings', return_value=loaded), \
+             patch.object(tui, 'save_directory_settings') as save, patch('curses.curs_set'):
+            screen.getch.side_effect = [ord(new_input[0]), 9, 9, 10]
+            screen.get_wch.side_effect = [*new_input[1:], '\r']
+            save.return_value = {'input_dir': new_input, 'output_dir': state['output_dir'], 'course_output_dirs': {}, 'configured': True}
+            self.assertTrue(tui._directory_dialog(screen, state))
+            save.assert_called_once_with(new_input, state['output_dir'])
+        screen.clear.assert_called()
+
+    def test_cell_screen_emits_wide_chars_in_one_physical_cell(self):
+        raw = MagicMock()
+        raw.getmaxyx.return_value = (5, 12)
+        screen = tui._CellScreen(raw, ansi=False)
+        screen.erase()
+        tui._box(screen, 0, 0, 2, 10)
+        screen.addstr(1, 2, '普物AB')
+        screen.move(1, 8)
+        screen.refresh()
+        row1 = [c.args for c in raw.addstr.call_args_list if c.args[0] == 1]
+        # 12 display columns become 10 physical cells (2 wide chars); border stays at display col 10.
+        self.assertEqual(''.join(args[2] for args in row1), '| 普物AB  | ')
+        raw.move.assert_called_with(1, 6)
+
+    def test_cell_screen_overwriting_half_a_wide_char_blanks_it(self):
+        raw = MagicMock()
+        raw.getmaxyx.return_value = (3, 8)
+        screen = tui._CellScreen(raw, ansi=False)
+        screen.addstr(0, 0, '普X')
+        screen.addstr(0, 1, 'Y')
+        screen.refresh()
+        self.assertEqual(''.join(c.args[2] for c in raw.addstr.call_args_list), ' YX     ')
+
+    def test_cell_screen_ansi_runs_start_at_display_columns(self):
+        raw = MagicMock()
+        raw.getmaxyx.return_value = (3, 12)
+        shadow = 1 << 20
+        screen = tui._CellScreen(raw, ansi=True, shadow=shadow)
+        screen.addstr(0, 0, '|普物', 0)
+        screen.addstr(0, 5, 'AB', 7)
+        screen.addstr(0, 11, '|')
+        screen.move(0, 7)
+        screen.refresh()
+        calls = [c.args[1:] for c in raw.addstr.call_args_list]
+        # Every run is placed at its display column; a wide char ends its run and
+        # its saved cell becomes a trailing space overwritten by the next run.
+        self.assertEqual(calls, [(0, '|普 ', 0), (3, '物 ', shadow), (5, 'AB', 7), (7, '    |', 0)])
+        raw.move.assert_called_with(0, 7)
+        raw.touchwin.assert_called()
+
+    def test_folder_dropped_as_source_file_explains_next_step(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        folder = Path(temporary.name)
+        (folder / 'lesson.zip').write_bytes(b'')
+        with self.assertRaisesRegex(ValueError, r'这是文件夹.*1 个 ZIP.*DIRECTORIES'):
+            tui._load_asset_into_state({'asset': str(folder)})
+
+    def test_paste_burst_collects_queued_input_only(self):
+        import curses
+        screen = MagicMock()
+        screen.get_wch.side_effect = [*r':\Work\普物', '\r']
+        with patch('curses.napms'):
+            self.assertEqual(tui._read_paste_burst(screen), r':\Work\普物')
+        screen.get_wch.side_effect = curses.error('no input')
+        with patch('curses.napms'):
+            self.assertEqual(tui._read_paste_burst(screen), '')
+        screen.nodelay.assert_called_with(False)
+
     def test_open_course_package_retains_true_output_root(self):
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary).resolve()
             package = output / 'Course_2026-01-02'
             workspace = package / '资料与交接' / 'stable-id'
             (workspace / 'handoff').mkdir(parents=True)
-            (package / '.handouter-collection.json').write_text(json.dumps({'lecture_date': '2026-01-02'}))
-            (workspace / 'handoff/sources.json').write_text(json.dumps({'course_title': 'Course', 'lecture_id': 'stable-id', 'options': {}, 'modes': ['deep']}))
+            (package / '.handouter-collection.json').write_text(json.dumps({'lecture_date': '2026-01-02'}), encoding="utf-8")
+            (workspace / 'handoff/sources.json').write_text(json.dumps({'course_title': 'Course', 'lecture_id': 'stable-id', 'options': {}, 'modes': ['deep']}), encoding="utf-8")
             with patch.object(tui, 'resolve_workspace', return_value=workspace), patch.object(tui, 'package_for_workspace', return_value=package):
                 state = {}
                 tui._load_workspace_into_state(state, str(package))

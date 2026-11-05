@@ -42,7 +42,7 @@ class LocalEditorialTests(unittest.TestCase):
         result = prepare_lecture(self.base / 'workspace', lecture_id='synthetic', course_title='合成课',
             transcript=source, mode='complete', use_slides_as_source=False, embed_slides=False)
         self.root = result.workspace
-        self.sources = json.loads((self.root / 'handoff/sources.json').read_text())
+        self.sources = json.loads((self.root / 'handoff/sources.json').read_text(encoding="utf-8"))
         self.note = self.root / self.sources['expected_outputs']['complete']
         self.note.parent.mkdir(exist_ok=True)
         self.note.write_text('# 合成讲义\n\n定义甲：仅在条件甲下成立。\n\n实验为建议。\n', encoding='utf-8')
@@ -85,7 +85,7 @@ class LocalEditorialTests(unittest.TestCase):
 
     def test_real_output_anchor_need_not_be_first_line(self):
         value = self.checked('claim_support', issue=False)
-        text = self.note.read_text(); start = text.index('实验')
+        text = self.note.read_text(encoding="utf-8"); start = text.index('实验')
         value['reports'][0]['checks']['claim_support']['output_refs'] = [{
             'kind': 'output_span', 'output_sha256': hashlib.sha256(self.note.read_bytes()).hexdigest(),
             'start': start, 'end': start + 6}]
@@ -187,7 +187,7 @@ class LocalEditorialTests(unittest.TestCase):
 
     def test_changed_draft_invalidates_old_report(self):
         er.save_review(self.root, self.sources, encoded(self.checked()))
-        self.note.write_text(self.note.read_text() + '\n新增正文。\n')
+        self.note.write_text(self.note.read_text(encoding="utf-8") + '\n新增正文。\n', encoding="utf-8")
         self.assertEqual(plan_task(self.root).quality['complete']['editorial_state'], 'stale')
 
     def test_html_file_required_for_rendering_declaration(self):
@@ -196,9 +196,9 @@ class LocalEditorialTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'HTML_EVIDENCE_MISSING'):
             er.validate_review(encoded(value), self.root, self.sources)
         html_path = self.note.with_suffix('.html')
-        html_path.write_text('<html><p>合成</p></html>')
+        html_path.write_text('<html><p>合成</p></html>', encoding="utf-8")
         digest = hashlib.sha256(html_path.read_bytes()).hexdigest()
-        state = json.loads((self.root / 'state.json').read_text())
+        state = json.loads((self.root / 'state.json').read_text(encoding="utf-8"))
         state['html_delivery'] = {'outputs': {'complete': html_path.relative_to(self.root).as_posix()},
             'hashes': {'complete': digest}, 'note_hashes': {'complete': value['reports'][0]['output_sha256']}}
         (self.root / 'state.json').write_bytes(encoded(state))
@@ -222,8 +222,12 @@ class LocalEditorialTests(unittest.TestCase):
         view = plan_task(self.root).quality['complete']
         self.assertEqual(view['source_preservation']['status'], 'not_run')
         self.assertEqual(view['rendering']['status'], 'not_run')
-        from handouter.tui import _result_rows
-        rows = '\n'.join(_result_rows(self.root))
+        from handouter import tui
+        tui.set_language("en")
+        try:
+            rows = '\n'.join(tui._result_rows(self.root))
+        finally:
+            tui.set_language(None)
         self.assertIn('no automatic semantic certification', rows)
         self.assertIn('technical: not_run', rows)
 
@@ -269,7 +273,7 @@ class LocalEditorialTests(unittest.TestCase):
     def test_web_materials_keep_review_policy_and_model_unknown(self):
         from handouter.agents.web import create_web_handoff
         web = create_web_handoff(self.root)
-        text = web.materials.read_text()
+        text = web.materials.read_text(encoding="utf-8")
         self.assertIn('"editorial_review": {', text)
         self.assertIn(er.instructions(), text)
         self.assertNotIn('semantic_passed": true', text)
@@ -313,7 +317,7 @@ class LocalEditorialTests(unittest.TestCase):
     def test_quote_is_exact_escaped_and_accepted_by_existing_checker(self):
         quote = context(self.root, source_ref='transcript:L4-L4', quote=True)
         self.assertIn('&lt;x&gt; &amp; y', quote['quote_markdown'])
-        self.note.write_text('# 合成\n\n' + quote['quote_markdown'] + '\n')
+        self.note.write_text('# 合成\n\n' + quote['quote_markdown'] + '\n', encoding="utf-8")
         report = validate_note_output(self.root)
         self.assertTrue(report.ok, report.errors)
         with self.assertRaisesRegex(ValueError, 'RANGE_TOO_LARGE'):
@@ -333,9 +337,9 @@ class LocalEditorialTests(unittest.TestCase):
         self.note.unlink()
         def fake_run(command, **kwargs):
             task = Path(kwargs['cwd'])
-            sources = json.loads((task / 'handoff/sources.json').read_text())
+            sources = json.loads((task / 'handoff/sources.json').read_text(encoding="utf-8"))
             output = task / sources['expected_outputs']['complete']
-            output.write_text('# 合成稿\n\n只保留定义甲。\n')
+            output.write_text('# 合成稿\n\n只保留定义甲。\n', encoding="utf-8")
             value = er.template(task, sources, 'complete')
             value['reports'][0]['checks']['source_preservation'] = findings
             (task / er.RECORD_PATH).write_bytes(encoded(value))
@@ -352,16 +356,16 @@ class LocalEditorialTests(unittest.TestCase):
     def test_malformed_optional_review_not_accepted_but_safe_draft_survives(self):
         self.note.unlink()
         def fake_run(command, **kwargs):
-            task = Path(kwargs['cwd']); source = json.loads((task / 'handoff/sources.json').read_text())
-            (task / source['expected_outputs']['complete']).write_text('# 完整合成稿\n\n示例正文。\n')
-            (task / er.RECORD_PATH).write_text('{"passed":true}')
+            task = Path(kwargs['cwd']); source = json.loads((task / 'handoff/sources.json').read_text(encoding="utf-8"))
+            (task / source['expected_outputs']['complete']).write_text('# 完整合成稿\n\n示例正文。\n', encoding="utf-8")
+            (task / er.RECORD_PATH).write_text('{"passed":true}', encoding="utf-8")
             return SimpleNamespace(returncode=0)
         with patch('handouter.agents.codex.availability', return_value=AgentAvailability('codex', True, '/fake/codex', 'cli')), \
              patch('handouter.agents.codex.build_command', return_value=['/fake/codex']), \
              patch('handouter.agents.runner.subprocess.run', side_effect=fake_run):
             run = run_cli_agent(self.root, agent='codex')
         self.assertTrue(run.validation_ok, run.validation_errors)
-        state = json.loads((self.root / 'state.json').read_text())
+        state = json.loads((self.root / 'state.json').read_text(encoding="utf-8"))
         self.assertEqual(state['agent_output']['editorial_review_diagnostic'], 'invalid_or_incomplete')
         self.assertEqual(plan_task(self.root).quality['complete']['editorial_state'], 'not_assessed')
 

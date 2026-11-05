@@ -38,7 +38,7 @@ class DirectorySettingsTests(unittest.TestCase):
             'course_folder_modes': {}, 'configured': True})
         self.assertFalse(incoming.exists())
         self.assertFalse(outgoing.exists())
-        self.assertEqual(set(json.loads(self.config.read_text())),
+        self.assertEqual(set(json.loads(self.config.read_text(encoding="utf-8"))),
                          {'schema_version', 'input_dir', 'output_dir', 'course_output_dirs',
                           'course_aliases', 'course_folder_modes'})
 
@@ -97,7 +97,7 @@ class DirectorySettingsTests(unittest.TestCase):
         loaded = settings.load_directory_settings()
         self.assertEqual(loaded['course_aliases'], {})
         settings.save_course_aliases('Course', ['C'])
-        self.assertEqual(json.loads(self.config.read_text())['schema_version'], 3)
+        self.assertEqual(json.loads(self.config.read_text(encoding="utf-8"))['schema_version'], 3)
 
     def test_course_output_cannot_overlap_input(self):
         settings.save_directory_settings(self.root / 'input', self.root / 'default-output')
@@ -183,12 +183,12 @@ class DirectorySettingsTests(unittest.TestCase):
         workspace = Path(payload['workspace'])
         self.assertEqual(payload['output_directory'], str(self.root / '计组'))
         self.assertEqual(workspace.parent.parent.name, '09-17')
-        sources = json.loads((workspace / 'handoff/sources.json').read_text())
+        sources = json.loads((workspace / 'handoff/sources.json').read_text(encoding="utf-8"))
         self.assertEqual(sources['course_title'], '计算机组成')
 
     def test_rejects_relative_nested_equal_files_and_credentials(self):
         file = self.root / 'course.md'
-        file.write_text('preserve')
+        file.write_text('preserve', encoding="utf-8")
         for incoming, outgoing in [('relative', self.root / 'out'),
                                    (self.root / 'in', self.root / 'in'),
                                    (self.root / 'in', self.root / 'in/out'),
@@ -197,14 +197,19 @@ class DirectorySettingsTests(unittest.TestCase):
                                    (self.root / 'auth_key=synthetic', self.root / 'out')]:
             with self.subTest(incoming=incoming, outgoing=outgoing), self.assertRaises(ValueError):
                 settings.save_directory_settings(incoming, outgoing)
-        self.assertEqual(file.read_text(), 'preserve')
+        self.assertEqual(file.read_text(encoding="utf-8"), 'preserve')
         self.assertFalse(self.config.exists())
 
     def test_rejects_symlink_configuration_and_parent(self):
         target = self.root / 'course.md'
-        target.write_text('preserve')
+        target.write_text('preserve', encoding="utf-8")
         self.config.parent.mkdir()
-        self.config.symlink_to(target)
+        try:
+            self.config.symlink_to(target)
+        except OSError as exc:
+            if getattr(exc, 'winerror', None) == 1314:
+                self.skipTest('symlinks unavailable')
+            raise
         with self.assertRaises(ValueError):
             settings.save_directory_settings(self.root / 'in', self.root / 'out')
         with self.assertRaises(ValueError):
@@ -216,17 +221,17 @@ class DirectorySettingsTests(unittest.TestCase):
         self.config.parent.symlink_to(elsewhere, target_is_directory=True)
         with self.assertRaises(ValueError):
             settings.save_directory_settings(self.root / 'in', self.root / 'out')
-        self.assertEqual(target.read_text(), 'preserve')
+        self.assertEqual(target.read_text(encoding="utf-8"), 'preserve')
 
     def test_corrupt_configuration_is_explicit(self):
         self.config.parent.mkdir()
-        self.config.write_text('{broken')
+        self.config.write_text('{broken', encoding="utf-8")
         with self.assertRaises(ValueError):
             settings.load_directory_settings()
 
     def test_corrupt_configuration_can_be_reset_with_both_global_paths(self):
         self.config.parent.mkdir()
-        self.config.write_text('{broken')
+        self.config.write_text('{broken', encoding="utf-8")
         result = settings.save_directory_settings(self.root / 'new-in', self.root / 'new-out')
         self.assertEqual(result['input_dir'], str(self.root / 'new-in'))
         self.assertEqual(result['output_dir'], str(self.root / 'new-out'))
@@ -263,10 +268,10 @@ class DirectorySettingsTests(unittest.TestCase):
         config = self.root / 'xdg'
         config.mkdir()
         file = config / 'user-dirs.dirs'
-        file.write_text('XDG_DESKTOP_DIR="$HOME/桌面"\n')
+        file.write_text('XDG_DESKTOP_DIR="$HOME/桌面"\n', encoding="utf-8")
         with patch.object(platform_support.sys, 'platform', 'linux'), patch.object(Path, 'home', return_value=self.root), patch.dict(os.environ, {'XDG_CONFIG_HOME': str(config)}):
             self.assertEqual(platform_support.desktop_directory(), self.root / '桌面')
-            file.write_text('XDG_DESKTOP_DIR="$(touch hacked)"\n')
+            file.write_text('XDG_DESKTOP_DIR="$(touch hacked)"\n', encoding="utf-8")
             self.assertEqual(platform_support.desktop_directory(), self.root / 'Desktop')
         self.assertFalse((self.root / 'hacked').exists())
 

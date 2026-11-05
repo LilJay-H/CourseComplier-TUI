@@ -27,14 +27,14 @@ class TaskWorkflowTests(unittest.TestCase):
 
     def test_partial_cli_continuation_does_not_overwrite_completed_mode(self):
         completed = self.workspace / 'notes/deep-001.md'
-        completed.write_text('# Completed\n\nRetain exact bytes.\n')
+        completed.write_text('# Completed\n\nRetain exact bytes.\n', encoding="utf-8")
         before = completed.read_bytes()
         def fake_run(command, **kwargs):
             task = Path(kwargs['cwd'])
-            sources = json.loads((task / 'handoff/sources.json').read_text())
+            sources = json.loads((task / 'handoff/sources.json').read_text(encoding="utf-8"))
             self.assertEqual(sources['expected_outputs'], {'summary': 'notes/summary-001.md'})
             self.assertFalse((task / 'notes/deep-001.md').exists())
-            (task / 'notes/summary-001.md').write_text('# Summary\n\nNew.\n')
+            (task / 'notes/summary-001.md').write_text('# Summary\n\nNew.\n', encoding="utf-8")
             return SimpleNamespace(returncode=0)
         with patch('handouter.agents.codex.availability', return_value=AgentAvailability('codex', True, '/fake/codex', 'cli')), \
              patch('handouter.agents.codex.build_command', return_value=['/fake/codex']), \
@@ -52,10 +52,10 @@ class TaskWorkflowTests(unittest.TestCase):
         def asr(source, output, **kwargs):
             output = Path(output)
             output.mkdir()
-            (output / 'transcript.txt').write_text('Synthetic 中文。')
+            (output / 'transcript.txt').write_text('Synthetic 中文。', encoding="utf-8")
             (output / 'segments.json').write_text(json.dumps([{'id': 'seg-0001', 'text': 'Synthetic 中文。',
-                'start_ms': 0, 'end_ms': 1000, 'timestamp_kind': 'sentence_or_vad', 'speaker': None}]))
-            (output / 'raw.json').write_text('{}')
+                'start_ms': 0, 'end_ms': 1000, 'timestamp_kind': 'sentence_or_vad', 'speaker': None}]), encoding="utf-8")
+            (output / 'raw.json').write_text('{}', encoding="utf-8")
             return ASRResult(output, output / 'raw.json', output / 'segments.json', output / 'transcript.txt',
                              1, 'sentence_or_vad', 'cpu', 0.1)
         failed_once = False
@@ -82,9 +82,9 @@ class TaskWorkflowTests(unittest.TestCase):
         from handouter.tasks import plan_task, retry_html
         from handouter.cli import _continue_payload
         self.assertEqual(plan_task(self.workspace).action, 'generate')
-        (self.workspace / 'notes/deep-001.md').write_text('# Deep\n\nComplete.\n')
+        (self.workspace / 'notes/deep-001.md').write_text('# Deep\n\nComplete.\n', encoding="utf-8")
         self.assertEqual(plan_task(self.workspace).action, 'partial')
-        (self.workspace / 'notes/summary-001.md').write_text('# Summary\n\nComplete.\n')
+        (self.workspace / 'notes/summary-001.md').write_text('# Summary\n\nComplete.\n', encoding="utf-8")
         self.assertEqual(plan_task(self.workspace).action, 'html_only')
         before = {p.name: p.read_bytes() for p in (self.workspace / 'notes').glob('*.md')}
         calls = []
@@ -112,7 +112,7 @@ class TaskWorkflowTests(unittest.TestCase):
     def test_web_return_is_bound_to_task_and_preserves_existing_output(self):
         from handouter.tasks import plan_task, import_note
         source = self.root / 'returned.md'
-        source.write_text('# Returned\n\nValid course text.\n')
+        source.write_text('# Returned\n\nValid course text.\n', encoding="utf-8")
         task_id = plan_task(self.workspace).task_id
         with self.assertRaises(ValueError):
             import_note(self.workspace, source, mode='deep', task_id='different-task', html=False)
@@ -126,7 +126,7 @@ class TaskWorkflowTests(unittest.TestCase):
     def test_web_placeholder_is_pending_not_a_completed_note(self):
         from handouter.tasks import plan_task, import_note
         source = self.root / 'pending.md'
-        source.write_text('# Returned\n\n[插图位置：Slides.pdf 第 1 页]\n')
+        source.write_text('# Returned\n\n[插图位置：Slides.pdf 第 1 页]\n', encoding="utf-8")
         result = import_note(self.workspace, source, mode='deep', task_id=plan_task(self.workspace).task_id, html=False)
         self.assertEqual(result['status'], 'needs_images')
         self.assertTrue((self.workspace / result['draft']).is_file())
@@ -134,13 +134,13 @@ class TaskWorkflowTests(unittest.TestCase):
 
     def test_pdf_placement_placeholder_is_not_validated_as_final_output(self):
         from handouter.validation import validate_note_output
-        (self.workspace / 'notes/deep-001.md').write_text('# Draft\n\n[插图位置：Slides.pdf 第 1 页]\n')
+        (self.workspace / 'notes/deep-001.md').write_text('# Draft\n\n[插图位置：Slides.pdf 第 1 页]\n', encoding="utf-8")
         self.assertFalse(validate_note_output(self.workspace, output='notes/deep-001.md').ok)
 
     def test_incomplete_agent_run_preserves_valid_mode_for_next_attempt(self):
         def fake_run(command, **kwargs):
             task = Path(kwargs['cwd'])
-            (task / 'notes/deep-001.md').write_text('# Deep\n\nComplete.\n')
+            (task / 'notes/deep-001.md').write_text('# Deep\n\nComplete.\n', encoding="utf-8")
             return SimpleNamespace(returncode=0)
         with patch('handouter.agents.codex.availability', return_value=AgentAvailability('codex', True, '/fake/codex', 'cli')), \
              patch('handouter.agents.codex.build_command', return_value=['/fake/codex']), \
@@ -148,7 +148,7 @@ class TaskWorkflowTests(unittest.TestCase):
             result = run_cli_agent(self.workspace, agent='codex')
         self.assertFalse(result.validation_ok)
         self.assertTrue((self.workspace / 'notes/deep-001.md').is_file())
-        self.assertEqual(json.loads((self.workspace / 'state.json').read_text())['agent_output']['status'], 'partial')
+        self.assertEqual(json.loads((self.workspace / 'state.json').read_text(encoding="utf-8"))['agent_output']['status'], 'partial')
 
     def test_browser_asset_identity_is_provided_by_the_configured_plugin(self):
         from handouter.tasks import asset_fingerprint
@@ -167,7 +167,7 @@ class TaskWorkflowTests(unittest.TestCase):
 
     def test_partial_web_and_manual_only_request_missing_mode(self):
         from handouter.cli import _continue_payload
-        (self.workspace / 'notes/deep-001.md').write_text('# Existing\n\nKeep.\n')
+        (self.workspace / 'notes/deep-001.md').write_text('# Existing\n\nKeep.\n', encoding="utf-8")
         web, code = _continue_payload(self.workspace, agent='web')
         self.assertEqual(code, 0)
         self.assertEqual(web['agent_interaction']['expected_outputs'], {'summary': 'notes/summary-001.md'})
@@ -202,7 +202,7 @@ class TaskWorkflowTests(unittest.TestCase):
     def test_missing_html_dependency_preserves_import_and_records_retry(self):
         from handouter.tasks import plan_task, import_note, retry_html
         source = self.root / 'returned.md'
-        source.write_text('# Returned\n\nValid content.\n')
+        source.write_text('# Returned\n\nValid content.\n', encoding="utf-8")
         task_id = plan_task(self.workspace).task_id
         with patch('handouter.doctor.require_features', side_effect=RuntimeError('missing html extra')), \
              patch('handouter.html_export.export_html') as export:
@@ -213,7 +213,7 @@ class TaskWorkflowTests(unittest.TestCase):
             self.assertEqual(retry_html(self.workspace)['status'], 'failed')
             export.assert_not_called()
         self.assertEqual((self.workspace / result['output']).read_bytes(), source.read_bytes())
-        state = json.loads((self.workspace / 'state.json').read_text())
+        state = json.loads((self.workspace / 'state.json').read_text(encoding="utf-8"))
         self.assertEqual(state['html_delivery']['status'], 'failed')
         self.assertEqual(plan_task(self.workspace).action, 'partial')
 
@@ -228,4 +228,4 @@ class TaskWorkflowTests(unittest.TestCase):
         import_note(self.workspace, source, mode='summary', task_id=task_id, html=True)
         self.assertEqual(retry_html(self.workspace)['status'], 'ready')
         self.assertEqual(plan_task(self.workspace).action, 'complete')
-        self.assertIn('<math', (self.workspace / 'notes/deep-001.html').read_text())
+        self.assertIn('<math', (self.workspace / 'notes/deep-001.html').read_text(encoding="utf-8"))

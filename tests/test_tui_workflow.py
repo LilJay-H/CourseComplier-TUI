@@ -15,11 +15,18 @@ from handouter.service import prepare_lecture
 
 class TUIWorkflowTests(unittest.TestCase):
     def setUp(self):
+        # These regressions pin behaviour and the English wording; Chinese (the
+        # default) is covered by TUILanguageTests.
+        english = patch.object(tui.tui_text, 'DEFAULT_LANGUAGE', 'en')
+        english.start()
+        self.addCleanup(english.stop)
+        tui.set_language('en')
+        self.addCleanup(tui.set_language, 'zh')
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
         transcript = self.root / 'lecture.txt'
-        transcript.write_text('合成课程')
+        transcript.write_text('合成课程', encoding='utf-8')
         self.workspace = prepare_lecture(self.root / 'out', lecture_id='course', course_title='合成',
                                          transcript=transcript, use_slides_as_source=False).workspace.resolve()
         self.cfg = {'output_dir': str(self.workspace.parent), 'lecture': 'course',
@@ -80,7 +87,7 @@ class TUIWorkflowTests(unittest.TestCase):
         state = {**self.cfg, 'asset': 'https://example.invalid/?auth_key=synthetic-secret',
                  'source_note': 'private-note.md', 'cookie': 'synthetic-secret', 'title': 'private transcript'}
         tui._save_preferences(state, storage)
-        serialized = (storage / '.handouter-preferences.json').read_text()
+        serialized = (storage / '.handouter-preferences.json').read_text(encoding="utf-8")
         self.assertNotIn('synthetic-secret', serialized)
         self.assertNotIn('private-note', serialized)
         self.assertNotIn('private transcript', serialized)
@@ -168,8 +175,8 @@ class TUIWorkflowTests(unittest.TestCase):
         import curses
         screen = MagicMock()
         screen.getmaxyx.return_value = (32, 112)
-        # Complete adds one visible deliverable before the existing option/actions.
-        screen.getch.side_effect = [*[9] * 19, 10, curses.KEY_F5, ord('q')]
+        # Complete adds one visible deliverable and Language one option before the actions.
+        screen.getch.side_effect = [*[9] * 20, 10, curses.KEY_F5, ord('q')]
         with patch('curses.wrapper', side_effect=lambda callback: callback(screen)), patch('curses.curs_set'), \
              patch.object(tui, '_load_preferences', return_value={}), patch.object(tui, '_save_preferences'), \
              patch.object(tui, '_edit_value', return_value=(str(self.workspace), True)), \
@@ -197,7 +204,7 @@ class TUIWorkflowTests(unittest.TestCase):
         from handouter.tasks import plan_task
         task_id = plan_task(self.workspace).task_id
         returned = self.root / 'returned.md'
-        returned.write_text('# 合成返回稿')
+        returned.write_text('# 合成返回稿', encoding='utf-8')
         screen = MagicMock()
         screen.getmaxyx.return_value = (32, 112)
         screen.getch.side_effect = [*[9] * 4, ord('i'), ord('q')]
@@ -215,13 +222,13 @@ class TUIWorkflowTests(unittest.TestCase):
         storage.mkdir()
         (storage / '.handouter-preferences.json').write_text(json.dumps({
             'notes_deep': 'false', 'agent': 'untrusted', 'format_profile': 'unknown',
-            'output_dir': 'https://example.invalid/?token=synthetic-secret'}))
+            'output_dir': 'https://example.invalid/?token=synthetic-secret'}), encoding="utf-8")
         self.assertEqual(tui._load_preferences(storage), {})
 
     def test_unchanged_submitted_revision_continues_without_prompt_refresh(self):
         from handouter.service import refresh_handoff
         note = self.root / 'submitted.md'
-        note.write_text('# 已有讲义\n\n有条件的结论。')
+        note.write_text('# 已有讲义\n\n有条件的结论。', encoding='utf-8')
         refresh_handoff(self.workspace, source_note=note, modes=['deep'])
         before = (self.workspace / 'handoff/PROMPT.md').read_bytes()
         cfg = {**self.cfg, 'source_note': str(note), 'revision_action': 'derive'}
@@ -230,13 +237,13 @@ class TUIWorkflowTests(unittest.TestCase):
         self.assertEqual(action, 'continue')
         self.assertEqual((self.workspace / 'handoff/PROMPT.md').read_bytes(), before)
         self.assertEqual(tui._task_cli_args(cfg, prompt_only=True)[0][0], 'prompt')
-        note.write_text('# Explicitly changed submitted note')
+        note.write_text('# Explicitly changed submitted note', encoding='utf-8')
         self.assertEqual(tui._task_cli_args(cfg, prompt_only=False)[0][0], 'prompt')
 
     def test_missing_note_can_continue_explicit_workspace_snapshot(self):
         from handouter.service import refresh_handoff
         note = self.root / 'submitted.md'
-        note.write_text('# 已提交的合成讲义')
+        note.write_text('# 已提交的合成讲义', encoding='utf-8')
         refresh_handoff(self.workspace, source_note=note, modes=['deep'])
         note.unlink()
         cfg = {**self.cfg, 'source_note': str(note), 'revision_action': 'derive'}
@@ -246,13 +253,13 @@ class TUIWorkflowTests(unittest.TestCase):
         args, action = tui._task_cli_args(cfg, prompt_only=False)
         self.assertEqual(args[0], 'continue')
         self.assertFalse(cfg['source_note'])
-        sources = json.loads((self.workspace / 'handoff/sources.json').read_text())
+        sources = json.loads((self.workspace / 'handoff/sources.json').read_text(encoding='utf-8'))
         self.assertIn('已提交的合成讲义', sources['revision']['text'])
 
     def test_revision_action_change_remains_explicit_and_illustrate_is_single_mode(self):
         from handouter.service import refresh_handoff
         note = self.root / 'submitted.md'
-        note.write_text('# 已提交的合成讲义')
+        note.write_text('# 已提交的合成讲义', encoding='utf-8')
         refresh_handoff(self.workspace, source_note=note, modes=['deep'])
         cfg = {**self.cfg, 'source_note': str(note), 'revision_action': 'illustrate'}
         self.assertEqual(tui._task_cli_args(cfg, prompt_only=False)[0][0], 'prompt')

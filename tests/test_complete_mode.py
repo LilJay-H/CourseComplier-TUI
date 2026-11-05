@@ -91,7 +91,9 @@ class CompleteModeTests(unittest.TestCase):
 
     def test_generated_policy_and_transport_keep_layout_and_layer_scope(self):
         workspace = self.prepare(slides_dir=self.slides, embed_slides=True)
-        prompt = (workspace / 'handoff/PROMPT.md').read_text(encoding='utf-8')
+        # Bytes, not read_text(): the bundle must carry PROMPT.md unchanged, and
+        # universal-newline reading would hide CRLF written on Windows.
+        prompt = (workspace / 'handoff/PROMPT.md').read_bytes().decode('utf-8')
         self.assertIn('slides/layout', prompt)
         layout = (workspace / 'handoff/skill/references/slides/layout.md').read_text(encoding='utf-8')
         bundle = create_manual_bundle(workspace)

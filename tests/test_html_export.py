@@ -218,7 +218,7 @@ class HTMLExportTests(unittest.TestCase):
             first.write_text('user edited HTML', encoding='utf-8')
             second = export_html(note)[0]
             self.assertNotEqual(first, second)
-            self.assertEqual(first.read_text(), 'user edited HTML')
+            self.assertEqual(first.read_text(encoding="utf-8"), 'user edited HTML')
             self.assertEqual(note.read_bytes(), original)
 
     def test_active_html_rejected_without_partial_output(self):

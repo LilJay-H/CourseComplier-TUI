@@ -55,11 +55,11 @@ class HandoffWorkspaceTests(unittest.TestCase):
         workspace = result.workspace
         self.assertTrue((workspace / "handoff" / "PROMPT.md").is_file())
         self.assertFalse((workspace / "notes" / "full-001.md").exists())
-        manifest = json.loads((workspace / "manifest.json").read_text())
+        manifest = json.loads((workspace / "manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["transcript"]["timestamp_kind"], "unavailable")
         self.assertEqual(manifest["slides"]["event_count"], 0)
-        prompt = (workspace / "handoff" / "PROMPT.md").read_text()
-        sources = json.loads((workspace / "handoff" / "sources.json").read_text())
+        prompt = (workspace / "handoff" / "PROMPT.md").read_text(encoding="utf-8")
+        sources = json.loads((workspace / "handoff" / "sources.json").read_text(encoding="utf-8"))
         self.assertIn("handoff/skill/references/common/evidence.md", sources["skill"]["modules"])
         self.assertNotIn("{{", prompt)
         self.assertTrue(validate_workspace(workspace).ok)
@@ -72,8 +72,8 @@ class HandoffWorkspaceTests(unittest.TestCase):
             encoding="utf-8",
         )
         result = self.prepare(slides_dir=slides, slides_meta=legacy_meta, mode="deep")
-        sources = json.loads((result.workspace / "handoff" / "sources.json").read_text())
-        index = json.loads((result.workspace / "slides" / "index.json").read_text())
+        sources = json.loads((result.workspace / "handoff" / "sources.json").read_text(encoding="utf-8"))
+        index = json.loads((result.workspace / "slides" / "index.json").read_text(encoding="utf-8"))
         self.assertTrue(sources["options"]["use_slides_as_source"])
         self.assertFalse(sources["options"]["embed_slides"])
         self.assertEqual(index[0]["start_ms"], 5000)
@@ -82,18 +82,18 @@ class HandoffWorkspaceTests(unittest.TestCase):
     def test_embedding_implies_slide_source(self):
         slides = self.make_slides(None)
         result = self.prepare(slides_dir=slides, embed_slides=True)
-        sources = json.loads((result.workspace / "handoff" / "sources.json").read_text())
+        sources = json.loads((result.workspace / "handoff" / "sources.json").read_text(encoding="utf-8"))
         self.assertTrue(sources["options"]["use_slides_as_source"])
         self.assertTrue(sources["options"]["embed_slides"])
 
     def test_slides_can_be_present_but_ignored_by_agent(self):
         slides = self.make_slides(None)
         result = self.prepare(slides_dir=slides, use_slides_as_source=False)
-        sources = json.loads((result.workspace / "handoff" / "sources.json").read_text())
+        sources = json.loads((result.workspace / "handoff" / "sources.json").read_text(encoding="utf-8"))
         self.assertFalse(sources["options"]["use_slides_as_source"])
         self.assertEqual(sources["slides"]["image_count"], 1)
         self.assertIn("handoff/skill/references/slides/ignore.md", sources["skill"]["modules"])
-        ignore_rule = (result.workspace / "handoff" / "skill" / "references" / "slides" / "ignore.md").read_text()
+        ignore_rule = (result.workspace / "handoff" / "skill" / "references" / "slides" / "ignore.md").read_text(encoding="utf-8")
         self.assertIn("不使用 PPT", ignore_rule)
 
     def test_local_slide_filename_must_be_windows_portable(self):
@@ -113,7 +113,7 @@ class HandoffWorkspaceTests(unittest.TestCase):
         sentinel.write_text("keep", encoding="utf-8")
         with self.assertRaises(FileExistsError):
             self.prepare()
-        self.assertEqual(sentinel.read_text(), "keep")
+        self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
 
     def test_lecture_id_rejects_windows_invalid_characters(self):
         for lecture_id in ("course:01", "course?01", 'course"01', "course|01"):
@@ -131,14 +131,14 @@ class HandoffWorkspaceTests(unittest.TestCase):
         a = self.prepare(lecture_id="a-001", title="课程 Alpha", mode="summary")
         self.transcript.write_text("完全不同的 B 课程内容。", encoding="utf-8")
         b = self.prepare(lecture_id="b-001", title="课程 Beta", mode="deep")
-        a_prompt = (a.workspace / "handoff" / "PROMPT.md").read_text()
-        b_prompt = (b.workspace / "handoff" / "PROMPT.md").read_text()
+        a_prompt = (a.workspace / "handoff" / "PROMPT.md").read_text(encoding="utf-8")
+        b_prompt = (b.workspace / "handoff" / "PROMPT.md").read_text(encoding="utf-8")
         self.assertIn("课程 Alpha", a_prompt)
         self.assertNotIn("课程 Beta", a_prompt)
         self.assertIn("课程 Beta", b_prompt)
         self.assertNotIn("课程 Alpha", b_prompt)
-        self.assertIn("第一段课程内容", (a.workspace / "transcript" / "transcript.txt").read_text())
-        self.assertIn("完全不同的 B", (b.workspace / "transcript" / "transcript.txt").read_text())
+        self.assertIn("第一段课程内容", (a.workspace / "transcript" / "transcript.txt").read_text(encoding="utf-8"))
+        self.assertIn("完全不同的 B", (b.workspace / "transcript" / "transcript.txt").read_text(encoding="utf-8"))
 
     def test_conflicting_slide_time_aborts_without_partial_workspace(self):
         slides = self.make_slides([
@@ -164,7 +164,7 @@ class HandoffWorkspaceTests(unittest.TestCase):
         }])
         result = self.prepare(slides_dir=slides)
         for relative in ("manifest.json", "slides/index.json", "handoff/sources.json", "handoff/PROMPT.md"):
-            self.assertNotIn(secret, (result.workspace / relative).read_text())
+            self.assertNotIn(secret, (result.workspace / relative).read_text(encoding="utf-8"))
 
     def test_revisited_slide_counts_one_image_and_multiple_events(self):
         slides = self.make_slides([
@@ -172,7 +172,7 @@ class HandoffWorkspaceTests(unittest.TestCase):
             {"filename": "slide_001.png", "seconds": 20},
         ])
         result = self.prepare(slides_dir=slides)
-        manifest = json.loads((result.workspace / "manifest.json").read_text())
+        manifest = json.loads((result.workspace / "manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["slides"]["event_count"], 2)
         self.assertEqual(manifest["slides"]["image_count"], 1)
         self.assertTrue(validate_workspace(result.workspace).ok)
@@ -191,7 +191,7 @@ class HandoffWorkspaceTests(unittest.TestCase):
         note.write_text("# 摘要\n\n这里是 Agent 输出。\n", encoding="utf-8")
         report = validate_note_output(result.workspace, update_state=True)
         self.assertTrue(report.ok)
-        state = json.loads((result.workspace / "state.json").read_text())
+        state = json.loads((result.workspace / "state.json").read_text(encoding="utf-8"))
         self.assertEqual(state["agent_output"]["status"], "validated")
         self.assertEqual(state["agent_output"]["semantic_review"], "required")
 
