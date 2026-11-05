@@ -281,8 +281,12 @@ def verify_disposable_cache(cache: Path, target: Path) -> None:
     workspace = resolve_workspace(cache.parent)
     recorded = {item['sha256'] for item in read_json(workspace, 'manifest.json')['files']}
     from .safe_io import read_bytes
+    from .stage_cache import ALIAS_RECORD
+    # A source alias only re-derives the browser export's slide metadata; its
+    # images must still match the formal workspace like any other cache file.
+    derived = {'stages.json', ALIAS_RECORD} | ({'slides_meta.json'} if (target / ALIAS_RECORD).is_file() else set())
     for path in target.rglob('*'):
-        if path.is_file() and path.name != 'stages.json':
+        if path.is_file() and path.name not in derived:
             content = read_bytes(cache, path.relative_to(cache).as_posix())
             if hashlib.sha256(content).hexdigest() not in recorded:
                 raise ValueError('缓存含尚未保存在正式资料中的文件，拒绝清理唯一材料')

@@ -6,6 +6,7 @@ import shutil
 import json
 import uuid
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -24,7 +25,7 @@ from .media import AudioExtractResult, extract_audio
 from .validation import ValidationReport, validate_workspace
 from .workspace import WorkspaceSummary, create_workspace, read_json, validate_lecture_id
 from .revision import read_revision_note
-from .safe_io import locked_workspace, locked_output_root, publish_directory, read_json as read_safe_json
+from .safe_io import locked_workspace, locked_output_root, publish_directory, read_json as read_safe_json, safe_path
 from .organization import organized_operation
 
 
@@ -358,6 +359,25 @@ def build_from_asset_zip(
     """External collection -> complete standard-package check -> local preparation."""
     from .external_collector import convert_browser_export, inspect_browser_export
     details = inspect_browser_export(asset_zip)
+    fingerprint = details.get("source_fingerprint")
+    sweep_stale_temporaries()
+    if fingerprint and cache_root is not None:
+        reused = _reusable_collection(cache_root, lecture_id, fingerprint,
+                                      {'device': device, 'language': language, 'model_path': model_path})
+        if reused is not None:
+            # Same guarantee convert_browser_export gives: the export the user
+            # confirmed is still the one on disk.
+            if collector_source_sha256 is not None and details["source_sha256"] != collector_source_sha256:
+                raise ValueError("SOURCE_CHANGED: 原始资产已变化，请重新确认")
+            identity, audio, images, meta = reused
+            _progress(progress, "本机采集", 100, "这节课的音频已缓存，跳过视频下载")
+            return build_from_media(workspace_root, lecture_id=lecture_id, course_title=course_title,
+                media_source=audio, slides_dir=images, slides_meta=meta, mode=mode, modes=modes,
+                use_slides_as_source=use_slides_as_source, embed_slides=embed_slides, allow_web=allow_web,
+                format_profile=format_profile, skill_path=skill_path, device=device, language=language,
+                model_path=model_path, source_type="local_asset_package", progress=progress,
+                output_organization=output_organization, cache_root=cache_root,
+                input_fingerprint=fingerprint, cache_identity=identity)
     with tempfile.TemporaryDirectory(prefix="handouter-collection-") as temporary:
         standard = Path(temporary) / "standard.zip"
         checked = convert_browser_export(asset_zip, standard, allowed_media_hosts=allowed_media_hosts or [],
@@ -369,7 +389,56 @@ def build_from_asset_zip(
             allow_web=allow_web, format_profile=format_profile, skill_path=skill_path,
             device=device, language=language, model_path=model_path, progress=progress,
             output_organization=output_organization, cache_root=cache_root, checked_asset=checked,
-            input_fingerprint=details.get("source_fingerprint") or details["source_sha256"])
+            input_fingerprint=fingerprint or details["source_sha256"], source_alias=fingerprint)
+
+
+def _reusable_collection(cache_root, lecture_id, fingerprint, params):
+    """(media identity, cached audio, slide images, slide meta) when an earlier run of
+    this exact export already holds verified audio for the same ASR settings."""
+    from .stage_cache import MaterialCache, SourceAlias
+    try:
+        alias = SourceAlias(cache_root, validate_lecture_id(lecture_id), fingerprint)
+        record = alias.load()
+        if record is None:
+            return None
+        cache = MaterialCache(cache_root, lecture_id, record['media_identity'], params)
+        audio = cache._get('audio')
+        if audio is None:
+            return None
+        images, meta = alias.slides(record)
+        return record['media_identity'], safe_path(cache.root, audio['path']), images, meta
+    except (OSError, ValueError, KeyError):
+        return None  # Any doubt: download again rather than reuse unverified material.
+
+
+def sweep_stale_temporaries(max_age_hours: float = 24.0) -> list[str]:
+    """Remove collection/asset staging dirs a killed run left in the temp directory.
+
+    `TemporaryDirectory` cleans up on normal exit and exceptions, but not when the
+    TUI ends the whole process tree (cancel) or the machine shuts down; a half
+    downloaded lecture video can then stay behind (hundreds of MB). Only our own
+    prefixes are touched, and only when nothing inside changed for a day — far
+    beyond the plugin's 6 h conversion limit, so a live run is never affected.
+    """
+    removed = []
+    cutoff = time.time() - max_age_hours * 3600
+    base = Path(tempfile.gettempdir())
+    for prefix in ("handouter-collection-", "handouter-local-assets-"):
+        try:
+            candidates = list(base.glob(prefix + "*"))
+        except OSError:
+            continue
+        for path in candidates:
+            try:
+                if path.is_symlink() or not path.is_dir():
+                    continue
+                newest = max([path.lstat().st_mtime] + [item.lstat().st_mtime for item in path.rglob("*")])
+                if newest < cutoff:
+                    shutil.rmtree(path)
+                    removed.append(path.name)
+            except OSError:
+                continue
+    return removed
 
 
 def build_from_local_asset_zip(
@@ -397,6 +466,7 @@ def build_from_local_asset_zip(
     folder_name_mode: str = 'always',
     checked_asset=None,
     input_fingerprint: str | None = None,
+    source_alias: str | None = None,
 ) -> PrepareResult | BuildResult:
     """Site-neutral local asset ZIP -> existing preparation/ASR pipelines."""
     from .stage_cache import asset_fingerprint
@@ -440,7 +510,7 @@ def build_from_local_asset_zip(
         return build_from_media(workspace_root, media_source=package.media, device=device,
             language=language, model_path=model_path, progress=progress,
             cache_root=cache_root, source_type="local_asset_package",
-            input_fingerprint=identity, **common)
+            input_fingerprint=identity, source_alias=source_alias, **common)
 
 
 @organized_operation
@@ -469,8 +539,14 @@ def build_from_media(
     output_organization: dict | None = None,
     cache_root: Path | None = None,
     input_fingerprint: str | None = None,
+    cache_identity: str | None = None,
+    source_alias: str | None = None,
 ) -> BuildResult:
-    """Extract audio from local/authorized media, transcribe it, then prepare handoff."""
+    """Extract audio from local/authorized media, transcribe it, then prepare handoff.
+
+    `cache_identity` reuses the audio/ASR cache of an earlier run of the same
+    collector source (see `SourceAlias`); `source_alias` records that mapping.
+    """
     lecture_id = validate_lecture_id(lecture_id)
     root = Path(workspace_root)
     root.mkdir(parents=True, exist_ok=True)
@@ -483,7 +559,7 @@ def build_from_media(
                     embed_slides=embed_slides, allow_web=allow_web, format_profile=format_profile, skill_path=skill_path)
     from .stage_cache import MaterialCache, source_fingerprint, asset_fingerprint
     params = {'device': device, 'language': language, 'model_path': model_path}
-    identity = source_fingerprint(media_source, asset=slides_zip)
+    identity = cache_identity or source_fingerprint(media_source, asset=slides_zip)
     cache = MaterialCache(cache_root or root, lecture_id, identity, params)
     from .doctor import require_features
     needs_audio, needs_asr = not cache.has_complete('audio'), not cache.has_complete('asr')
@@ -491,6 +567,11 @@ def build_from_media(
     _progress(progress, '提取音频', 0, '复用已完成音频或调用 ffmpeg')
     media = cache.audio(media_source, extract_audio)
     _progress(progress, '提取音频', 100, '音频完成并保存校验记录')
+    if source_alias:
+        # Saved before ASR, so a failed transcription (e.g. out of memory) can be
+        # retried without downloading the video again.
+        from .stage_cache import SourceAlias
+        SourceAlias(cache_root or root, lecture_id, source_alias).save(identity, slides_dir, slides_meta)
     _progress(progress, 'ASR 转写', 0, '复用已完成 ASR 或运行 SenseVoice')
     asr = cache.asr(media.output, transcribe_sensevoice, **params)
     _progress(progress, 'ASR 转写', 100, f'完成（{asr.segment_count} 个片段）')

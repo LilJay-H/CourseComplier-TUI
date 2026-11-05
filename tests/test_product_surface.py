@@ -163,14 +163,17 @@ class ProductDirectoryTests(unittest.TestCase):
         from handouter import tui
         tui.set_language("en")
         try:
-            with patch("handouter.tui.available_cli_agents", return_value=fake):
+            with patch("handouter.tui.available_cli_agents", return_value=fake),                  patch("handouter.tui.sys.platform", "linux"):
                 values, labels = available_agent_choices()
+            with patch("handouter.tui.available_cli_agents", return_value=fake),                  patch("handouter.tui.sys.platform", "win32"):
+                windows_labels = available_agent_choices()[1]
         finally:
             tui.set_language(None)
         self.assertEqual(values, ["web", "manual", "codex"])
         self.assertEqual(labels["manual"], "GUI handoff")
         self.assertEqual(labels["codex"], "Codex CLI")
         self.assertNotIn("claude", labels)
+        self.assertIn("no sandbox", windows_labels["codex"])
 
     def test_product_tui_command_uses_direct_asset_and_output_dir(self):
         args = build_cli_args({

@@ -168,6 +168,7 @@ def _invoke(config: dict, method: str, params: dict, *, progress=None, timeout=3
         deadline = time.monotonic() + timeout
         input_worker.start()
         count = 0
+        byte_frames = 0
         terminal = None
         while terminal is None:
             remaining = deadline - time.monotonic()
@@ -186,16 +187,16 @@ def _invoke(config: dict, method: str, params: dict, *, progress=None, timeout=3
             if not isinstance(frame, dict):
                 raise ValueError("COLLECTOR_PROTOCOL: 插件响应无效")
             if frame.get("type") == "progress" and method == "convert":
-                count += 1
-                if frame.get("stage") not in _STAGES or count > 1000:
+                # Byte frames are counted apart: a long download from a plugin that
+                # reports often must not trip the stage-frame limit hours in.
+                if "completed_bytes" in frame:
+                    byte_frames += 1
+                else:
+                    count += 1
+                if frame.get("stage") not in _STAGES or count > 1000 or byte_frames > 100_000:
                     raise ValueError("COLLECTOR_PROTOCOL: 插件进度无效")
                 if progress:
-                    # The plugin reports stages only; place each stage on the bar so it
-                    # visibly advances, and say that a large download is slow.
-                    percent, detail = {"preparing": (5, "准备材料"),
-                                       "downloading": (10, "下载媒体（视频较大，可能需要几分钟，期间进度不变）"),
-                                       "packaging": (80, "生成标准包"), "publishing": (95, "发布标准包")}[frame["stage"]]
-                    progress("本机采集", percent, detail)
+                    progress("本机采集", *_progress_display(frame))
             elif frame.get("type") == "error":
                 # Only known codes map to fixed local wording; plugin messages are never echoed.
                 if frame.get("code") == "COLLECTOR_NO_MEDIA":
@@ -238,12 +239,38 @@ def _invoke(config: dict, method: str, params: dict, *, progress=None, timeout=3
             raise ValueError("COLLECTOR_CONTAINMENT: 无法确认采集进程树已结束，请检查任务进程")
 
 
-def _identity(config: dict) -> None:
+def _progress_display(frame: dict) -> tuple[int, str]:
+    """Bar position and wording for one plugin progress frame.
+
+    Stage-only frames get fixed positions so the bar visibly advances. With the
+    optional `progress_bytes` extension a downloading frame also carries
+    `completed_bytes` and `total_bytes` (null when unknown); the download then
+    fills 10–79 % of the bar, or shows the amount received so far.
+    """
+    stage = frame["stage"]
+    if stage == "downloading" and "completed_bytes" in frame:
+        done, total = frame.get("completed_bytes"), frame.get("total_bytes")
+        if (type(done) is not int or done < 0
+                or not (total is None or (type(total) is int and total > 0))):
+            raise ValueError("COLLECTOR_PROTOCOL: 插件进度无效")
+        mb = 1024 * 1024
+        if total:
+            ratio = min(1.0, done / total)
+            return 10 + int(69 * ratio), f"下载媒体 {done // mb}/{total // mb} MB"
+        return 10, f"下载媒体，已收到 {done // mb} MB"
+    return {"preparing": (5, "准备材料"),
+            "downloading": (10, "下载媒体（视频较大，可能需要几分钟）"),
+            "packaging": (80, "生成标准包"), "publishing": (95, "发布标准包")}[stage]
+
+
+def _identity(config: dict) -> list:
     frame = _invoke(config, "identity", {})
+    capabilities = frame.get("capabilities", [])
     if (frame.get("tool_id") != config["tool_id"] or frame.get("protocol_version") != 1
-            or not isinstance(frame.get("tool_version"), str)
-            or not all(cap in frame.get("capabilities", []) for cap in ("inspect", "convert"))):
+            or not isinstance(frame.get("tool_version"), str) or not isinstance(capabilities, list)
+            or not all(cap in capabilities for cap in ("inspect", "convert"))):
         raise ValueError("COLLECTOR_IDENTITY: 工具身份或协议不匹配")
+    return capabilities
 
 
 def configure(executable: str, sha256: str, tool_id: str, exporter_script: str | None = None) -> dict:
@@ -323,13 +350,18 @@ def convert_browser_export(source: str | Path, output: str | Path, *, allowed_me
         raise ValueError("SOURCE_CHANGED: 原始资产已变化，请重新确认")
     if set(allowed_media_hosts) != set(details["media_hosts"]):
         raise ValueError("COLLECTOR_HOST_CONFIRMATION: 请确认预检显示的全部媒体域名后重试")
-    _identity(config)
+    capabilities = _identity(config)
     target = Path(output).expanduser().absolute()
     if target.exists() or target.is_symlink() or not target.parent.is_dir():
         raise ValueError("COLLECTOR_OUTPUT: 输出必须是新的标准包路径")
-    result = _invoke(config, "convert", {"source_path": str(Path(source).expanduser().absolute()),
+    params = {"source_path": str(Path(source).expanduser().absolute()),
         "source_sha256": details["source_sha256"], "allowed_media_hosts": details["media_hosts"],
-        "output_path": str(target)}, progress=progress, timeout=6 * 60 * 60)
+        "output_path": str(target)}
+    if "progress_bytes" in capabilities:
+        # Optional extension: only plugins that declare it receive the switch,
+        # so older plugins keep their strict request schema.
+        params["progress_bytes"] = True
+    result = _invoke(config, "convert", params, progress=progress, timeout=6 * 60 * 60)
     if result.get("output_path") != str(target):
         raise ValueError("COLLECTOR_PROTOCOL: 插件输出路径无效")
     from handouter_local.assets import inspect

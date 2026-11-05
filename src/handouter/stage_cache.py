@@ -1,7 +1,9 @@
 """Small persistent audio/ASR cache; only completed, hashed stages are reusable."""
 import hashlib
 import json
+import os
 from pathlib import Path
+import re
 import shutil
 import uuid
 import zipfile
@@ -87,6 +89,93 @@ def local_input_fingerprint(primary: str | Path, **extras: str | Path | None) ->
         else:
             raise ValueError(f"本地附加材料不是文件或目录: {path}")
     return digest.hexdigest()
+
+
+ALIAS_RECORD = 'source-alias.json'
+
+
+class SourceAlias:
+    """Collector source fingerprint -> media cache identity plus a slide snapshot.
+
+    A browser export only yields media after the plugin downloads the whole video.
+    Once audio for that export is cached, this record lets a rerun skip the
+    download: it stores the media identity the audio cache is keyed by and a
+    hashed copy of the standard package's slides (images byte-identical to the
+    ones the workspace keeps). No URL is stored; the fingerprint is the
+    plugin's, which changes whenever the resource or its slides change.
+    """
+
+    def __init__(self, root: Path, lecture_id: str, fingerprint: str):
+        if not isinstance(fingerprint, str) or not re.fullmatch('[0-9a-f]{64}', fingerprint):
+            raise ValueError('来源指纹无效')
+        self.root = Path(root).resolve()
+        key = hashlib.sha256(('collector-source:' + fingerprint).encode()).hexdigest()
+        self.relative = f'.handouter-cache/{lecture_id}/{key}'
+        self.fingerprint = fingerprint
+
+    def load(self) -> dict | None:
+        """The verified record, or None when absent or not intact (never raises)."""
+        try:
+            directory = safe_path(self.root, self.relative, missing=True)
+            if not (directory / ALIAS_RECORD).is_file():
+                return None
+            record = json.loads(read_bytes(self.root, self.relative + '/' + ALIAS_RECORD))
+            if (not isinstance(record, dict) or record.get('fingerprint') != self.fingerprint
+                    or not re.fullmatch('[0-9a-f]{64}', str(record.get('media_identity', '')))
+                    or not isinstance(record.get('files'), dict)):
+                return None
+            for relative, digest in record['files'].items():
+                name = relative_path(relative)
+                if not (name == 'slides_meta.json' or name.startswith('images/')):
+                    return None
+                if sha256_file(self.root, f'{self.relative}/{name}') != digest:
+                    return None
+            images = directory / 'images'
+            present = {'images/' + item.name for item in images.iterdir()} if images.is_dir() else set()
+            if present != {name for name in record['files'] if name.startswith('images/')}:
+                return None  # An unrecorded extra image would leak into the slides.
+            return record
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            return None
+
+    def slides(self, record: dict) -> tuple[Path | None, Path | None]:
+        directory = safe_path(self.root, self.relative)
+        names = record['files']
+        images = directory / 'images' if any(name.startswith('images/') for name in names) else None
+        meta = directory / 'slides_meta.json' if 'slides_meta.json' in names else None
+        return images, meta
+
+    def save(self, media_identity: str, slides_dir: Path | None, slides_meta: Path | None) -> None:
+        """Best effort: a failure only means the next rerun downloads again."""
+        try:
+            directory = safe_path(self.root, self.relative, missing=True)
+            if directory.exists():
+                shutil.rmtree(directory)
+            staging = directory.with_name(directory.name + '.tmp-' + uuid.uuid4().hex)
+            files = {}
+            try:
+                if slides_dir is not None and Path(slides_dir).is_dir():
+                    (staging / 'images').mkdir(parents=True)
+                    for image in sorted(Path(slides_dir).iterdir()):
+                        if image.is_file() and not image.is_symlink():
+                            shutil.copyfile(image, staging / 'images' / image.name)
+                            files['images/' + image.name] = None
+                if slides_meta is not None and Path(slides_meta).is_file():
+                    staging.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(slides_meta, staging / 'slides_meta.json')
+                    files['slides_meta.json'] = None
+                staging.mkdir(parents=True, exist_ok=True)
+                for name in files:
+                    files[name] = hashlib.sha256((staging / name).read_bytes()).hexdigest()
+                (staging / ALIAS_RECORD).write_text(json.dumps(
+                    {'fingerprint': self.fingerprint, 'media_identity': media_identity, 'files': files},
+                    ensure_ascii=False, indent=2), encoding='utf-8')
+                os.rename(staging, directory)
+            finally:
+                if staging.exists():
+                    shutil.rmtree(staging, ignore_errors=True)
+        except (OSError, ValueError):
+            pass
 
 
 class MaterialCache:

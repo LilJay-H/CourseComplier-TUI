@@ -2,6 +2,13 @@
 
 2026-10-25：TUI 已抽取为独立本地 Git 仓库，可安装、启动和继续开发。GUI、Server、云客户端/协议和 GUI runtime 未进入本仓库；本地 Workflow 规则、用户 Agent 适配器和材料链路保留。来源记录见 NOTICE.md / provenance.json，归属清单见 docs/SPLIT_SCOPE.md。
 
+## Windows 真实课程实测与修复（2026-11-01 至 11-06，分支 fix/windows-round1）
+
+- Windows 11 / CPython 3.14：真实 SenseVoiceSmall + FSMN-VAD（CPU）、真实 Codex 与 Claude CLI、智云插件本机构建版，跑通 8 节真实课程（CLI 7 节、交互 TUI 1 节）的 ZIP → 下载 → ASR → Agent → 校验 → 离线 HTML。讲义语义质量未评审。
+- 第一轮修复：Codex 在 Windows 上 workspace-write 静默变只读（改用 bypass 参数）；Agent 登录预检与失败原因提示；CLI 相对路径；ASR 内存不足提示；CRLF 讲义；TUI 中文界面、PDCurses 宽字符显示、粘贴/拖入、目录对话框；测试套件在中文 Windows 上全绿。
+- 第二轮修复：Agent 阶段每 30 秒显示已用时间；插件 `progress_bytes` 字节进度（可选能力，旧插件不受影响）；同一浏览器 ZIP 的音频已缓存时跳过视频下载；启动采集时清理被强杀遗留的临时目录；缓存音频硬链接进工作区；TUI 的 W 支持拖入原始 ZIP、错误提示中文化、只预填真实讲次、空资料框单按 W 即打开讲次；输出目录拒绝相对路径；尚未运行的讲次显示实际将创建的位置；已有讲次加模式时可保留已完成的讲义。
+- 第二轮改动只有合成测试；交互 TUI 和真实下载未在第二轮人工复测。详见测试根目录的 TEST_LOG.md / ISSUES.md / TUI_ITERATION_REPORT.md。
+
 ## 本次外部采集器迁移（2026-10-25）
 
 - 已将原仓 `0a21e87` 的通用外部采集宿主同步到协作分支 `codex/external-collector-sync`；已经 PR #1 合并到 `main`（`5280a2c`）。

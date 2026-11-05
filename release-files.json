@@ -167,6 +167,7 @@
   "tests/test_split_distribution.py",
   "tests/test_task_workflow.py",
   "tests/test_tui_directories.py",
+  "tests/test_round2_usability.py",
   "tests/test_tui_language.py",
   "tests/test_tui_workflow.py",
   "tests/test_typora_export.py",

@@ -41,6 +41,24 @@ def _json_dump(path: Path, data: Any) -> None:
     )
 
 
+def _copy_cached(source: Path, target: Path) -> None:
+    """Copy, but hard-link audio that comes from our own stage cache.
+
+    Cached audio and the workspace copy are both write-once, hash-checked files;
+    a link avoids storing a lecture's audio twice on the same volume. A user's
+    own file is always copied, so later edits to it cannot reach the workspace.
+    """
+    source = Path(source)
+    if '.handouter-cache' in source.parts:
+        try:
+            import os
+            os.link(source, target)
+            return
+        except (OSError, NotImplementedError, AttributeError):
+            pass  # Different volume or no link support: fall back to a copy.
+    shutil.copyfile(source, target)
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as source:
@@ -348,7 +366,7 @@ def create_workspace(
         if audio_source is not None:
             audio_name = "source" + (audio_source.suffix.lower() or ".audio")
             audio_target = destination / "audio" / audio_name
-            shutil.copyfile(audio_source, audio_target)
+            _copy_cached(audio_source, audio_target)
             audio_relative = audio_target.relative_to(destination).as_posix()
             file_entries.append({
                 "role": "audio",

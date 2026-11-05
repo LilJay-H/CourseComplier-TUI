@@ -21,6 +21,16 @@ from collections import deque
 from typing import Any
 
 TAIL_BYTES = 16 * 1024
+HEARTBEAT_SECONDS = 30.0
+
+
+def heartbeat_line(elapsed: float) -> str:
+    """A progress line in the CLI's `[progress]` format: the Agent reports no
+    percentage, so show elapsed time instead of a bar frozen at 0%."""
+    minutes, seconds = divmod(int(elapsed), 60)
+    spent = f'{minutes} 分 {seconds:02d} 秒' if minutes else f'{seconds} 秒'
+    return (f"[progress] {'Agent/交付':<10} [{'-' * 24}]   0%  "
+            f"Agent 正在写讲义，已用 {spent}（通常需要 5–25 分钟）")
 
 LOGIN_HINTS = {
     'claude': 'Claude Code CLI 未登录：在终端运行 claude，输入 /login 完成登录（桌面 App 的登录不与命令行共用），再用 continue 续作',
@@ -31,7 +41,13 @@ _LOGIN = re.compile(r'not logged in|please run /login|please log ?in|run `?codex
                     r'|authentication (?:failed|required)|unauthori[sz]ed', re.I)
 _QUOTA = re.compile(r'hit your [^\n]{0,40}limit|usage limit|rate[ -]limit|quota|too many requests'
                     r'|credit balance is too low', re.I)
-_RESET = re.compile(r'(?:resets?|try again) (?:at |in )?([0-9][0-9:apm .()/A-Za-z_+-]{0,40})')
+# Only a clock/duration shape is ever echoed (e.g. "3pm", "14:30", "2h 5m"),
+# never surrounding words, so no lecture text can reach receipts.
+_RESET = re.compile(r'(?:resets?|try again) (?:at |in )?([0-9]{1,2}(?::[0-9]{2})?\s?(?:[ap]m|[hm](?:\s?[0-9]{1,2}m)?)?)\b', re.I)
+# A CLI prints its own fatal error last; only that end of the output is
+# matched, so a transcript or tool output mentioning "quota" or
+# "unauthorized" earlier in the run cannot be mistaken for the failure cause.
+DIAGNOSIS_WINDOW = 1500
 _NETWORK = re.compile(r'stream disconnected|network error|connection (?:refused|reset|error|timed out)'
                       r'|ENOTFOUND|ECONNRESET|ETIMEDOUT|getaddrinfo failed', re.I)
 
@@ -40,6 +56,7 @@ def diagnose(agent: str, returncode: int, tail: str) -> str | None:
     """Return one fixed, user-facing hint for a failed CLI Agent run, or None."""
     if returncode == 0 or not tail:
         return None
+    tail = tail[-DIAGNOSIS_WINDOW:]
     if _LOGIN.search(tail):
         return LOGIN_HINTS.get(agent, f'{agent} CLI 未登录：请先在终端完成登录再续作')
     if _QUOTA.search(tail):
@@ -66,16 +83,28 @@ def hint_from_errors(errors) -> str | None:
     return None
 
 
-def run_forwarding(command: list[str], *, input_text: str, cwd: Any) -> tuple[int, str]:
-    """Run like before (output streamed to stderr) and also return a short output tail."""
+def run_forwarding(command: list[str], *, input_text: str, cwd: Any,
+                   heartbeat: float | None = HEARTBEAT_SECONDS) -> tuple[int, str]:
+    """Run like before (output streamed to stderr) and also return a short output tail.
+
+    Every `heartbeat` seconds an elapsed-time `[progress]` line is written from the
+    same thread that forwards the child's bytes, starting on a fresh line, so it
+    never splits a line of child output.
+    """
     # Separate writer/reader handles: an inherited Windows handle shares its file
     # pointer, so the reader must never seek on the child's handle.
-    with tempfile.TemporaryDirectory(prefix='handouter-agent-log-') as directory, \
+    # ignore_cleanup_errors: a grandchild still holding the log (or a virus
+    # scanner) must not turn a finished Agent run into an exception that skips
+    # audit and publication.
+    with tempfile.TemporaryDirectory(prefix='handouter-agent-log-', ignore_cleanup_errors=True) as directory, \
             open(f'{directory}/output.log', 'wb') as sink, \
             open(f'{directory}/output.log', 'rb', buffering=0) as reader:
         done = threading.Event()
         tail: deque[str] = deque()
         size = [0]
+        line_open = [False]
+        started = time.monotonic()
+        next_beat = [started + heartbeat if heartbeat else None]
 
         def remember(text: str, raw: bytes = b'') -> None:
             # Forward the child's bytes unchanged when stderr is a real stream, so a
@@ -91,6 +120,10 @@ def run_forwarding(command: list[str], *, input_text: str, cwd: Any) -> tuple[in
                     sys.stderr.flush()
             except (OSError, ValueError):
                 pass
+            if raw:
+                line_open[0] = not raw.endswith((b'\n', b'\r'))
+            elif text:
+                line_open[0] = not text.endswith(('\n', '\r'))
             if not text:
                 return
             tail.append(text)
@@ -102,7 +135,10 @@ def run_forwarding(command: list[str], *, input_text: str, cwd: Any) -> tuple[in
             decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
             while True:
                 finished = done.is_set()
-                chunk = reader.read()
+                try:
+                    chunk = reader.read()
+                except (OSError, ValueError):
+                    return  # The log was closed after a stuck join; nothing left to forward.
                 if chunk:
                     remember(decoder.decode(chunk), chunk)
                 elif finished:
@@ -110,6 +146,15 @@ def run_forwarding(command: list[str], *, input_text: str, cwd: Any) -> tuple[in
                     return
                 else:
                     time.sleep(0.2)
+                now = time.monotonic()
+                if next_beat[0] is not None and now >= next_beat[0]:
+                    next_beat[0] = now + heartbeat
+                    try:
+                        sys.stderr.write(('\n' if line_open[0] else '') + heartbeat_line(now - started) + '\n')
+                        sys.stderr.flush()
+                        line_open[0] = False
+                    except (OSError, ValueError):
+                        pass
 
         thread = threading.Thread(target=pump, daemon=True)
         thread.start()
@@ -130,22 +175,29 @@ def login_status(agent: str, executable: str | None, *, timeout: float = 20) -> 
     command = {'claude': [executable, 'auth', 'status'], 'codex': [executable, 'login', 'status']}.get(agent)
     if command is None:
         return 'unknown'
+    # Output goes to files, not pipes: on Windows the npm `.cmd` wrapper's node
+    # grandchild keeps an inherited pipe open after a timeout kills cmd.exe, and
+    # reading such a pipe never finishes. A file never blocks the check.
     try:
-        result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8',
-                                errors='replace', timeout=timeout, check=False,
-                                stdin=subprocess.DEVNULL)
+        with tempfile.TemporaryDirectory(prefix='handouter-login-', ignore_cleanup_errors=True) as directory:
+            with open(f'{directory}/out', 'wb') as out, open(f'{directory}/err', 'wb') as err:
+                returncode = subprocess.run(command, stdout=out, stderr=err, timeout=timeout,
+                                            check=False, stdin=subprocess.DEVNULL).returncode
+            with open(f'{directory}/out', 'rb') as out, open(f'{directory}/err', 'rb') as err:
+                stdout = out.read(64 * 1024).decode('utf-8', 'replace')
+                stderr = err.read(64 * 1024).decode('utf-8', 'replace')
     except (OSError, subprocess.SubprocessError):
         return 'unknown'
-    output = (result.stdout or '') + (result.stderr or '')
+    output = stdout + stderr
     if agent == 'claude':
         try:
-            data = json.loads(result.stdout)
+            data = json.loads(stdout)
         except (json.JSONDecodeError, TypeError):
             data = None
         if isinstance(data, dict) and isinstance(data.get('loggedIn'), bool):
             return 'logged_in' if data['loggedIn'] else 'logged_out'
     if re.search(r'not logged in|logged out', output, re.I):
         return 'logged_out'
-    if result.returncode == 0 and re.search(r'logged in', output, re.I):
+    if returncode == 0 and re.search(r'logged in', output, re.I):
         return 'logged_in'
     return 'unknown'

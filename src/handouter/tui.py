@@ -80,6 +80,10 @@ def available_agent_choices() -> tuple[list[str], dict[str, str]]:
             continue
         values.append(item.name)
         labels[item.name] = {"codex": "Codex CLI", "claude": "Claude CLI"}.get(item.name, f"{item.name} CLI")
+    if "codex" in labels and sys.platform == "win32":
+        # codex-cli has no working workspace-write sandbox on native Windows, so
+        # the adapter runs it unsandboxed (in a throwaway copy); say so up front.
+        labels["codex"] = _t("agent_codex_windows")
     return values, labels
 
 
@@ -337,6 +341,7 @@ def _edit_value(stdscr, label: str, current: str, *, initial: str = "") -> tuple
     if initial:
         value = initial
         cursor = len(value)
+    fresh = not initial
     curses.curs_set(1)
     try:
         while True:
@@ -390,6 +395,7 @@ def _edit_value(stdscr, label: str, current: str, *, initial: str = "") -> tuple
             if key == "\x1b":
                 return current, False
             if isinstance(key, int):
+                fresh = False  # The user is editing the current value in place.
                 if key == curses.KEY_LEFT:
                     cursor = max(0, cursor - 1)
                 elif key == curses.KEY_RIGHT:
@@ -423,8 +429,18 @@ def _edit_value(stdscr, label: str, current: str, *, initial: str = "") -> tuple
                 value = value[:cursor]
                 continue
             if isinstance(key, str) and key.isprintable():
+                if fresh:
+                    burst = _read_paste_burst(stdscr)
+                    if burst:
+                        # A path dropped/pasted as the first input replaces the
+                        # prefilled value instead of being appended to it.
+                        value = key + burst
+                        cursor = len(value)
+                        fresh = False
+                        continue
                 value = value[:cursor] + key + value[cursor:]
                 cursor += len(key)
+            fresh = False
     finally:
         curses.curs_set(0)
 
@@ -465,6 +481,7 @@ def _load_asset_into_state(state: dict[str, Any]) -> str:
         state['course_output_configured'] = configured_course_output(state['title'], settings=directories) is not None
         state.pop('workspace', None)
     state['_identified_asset'] = str(asset)
+    state.pop('_preference_overrides', None)
     return _t("status_loaded", name=asset.name, kind=_kind_label(detected_kind))
 
 
@@ -503,6 +520,10 @@ def _confirm_collection(stdscr, state: dict[str, Any]) -> bool:
 def _commit_text_value(state: dict[str, Any], field_key: str, value: str) -> str | None:
     if field_key in {"asset", "output_dir", "input_dir"}:
         value = normalize_terminal_path(value)
+    if field_key == 'output_dir' and value and not Path(value).expanduser().is_absolute():
+        # A stray letter (e.g. a hotkey typed into the field) must not become
+        # a folder next to wherever the TUI happened to be started.
+        raise ValueError(_t('error_output_relative', path=value))
     if field_key == 'lecture_date':
         value = lecture_date(value) or ''
     state[field_key] = value
@@ -703,12 +724,87 @@ def _workspace_for_state(cfg: dict[str, Any]) -> Path | None:
     return find_workspace(output, lecture) or (output / lecture).resolve()
 
 
+def _workspace_display(state: dict[str, Any]) -> str:
+    """The workspace line: an existing folder, or where a new run will create one.
+
+    Before the first run the organized layout puts the lecture under
+    `<output>/<course date>/资料与交接/<lecture>`; showing `<output>/<lecture>`
+    (the legacy layout) there would point at a folder that will never exist.
+    """
+    try:
+        workspace = _workspace_for_state(state)
+    except (OSError, ValueError):
+        return _t('workspace_none')
+    if workspace is None:
+        return _t('workspace_none')
+    if state.get('workspace') or workspace.exists() or not state.get('title'):
+        return str(workspace)
+    try:
+        from .organization import package_name, MATERIALS
+        settings = load_directory_settings()
+        output = Path(normalize_terminal_path(str(state.get('output_dir') or ''))).expanduser()
+        base, _style = package_name(state['title'], lecture_date(state.get('lecture_date') or None) or None, output,
+                                    aliases=aliases_for_course(state['title'], settings=settings),
+                                    folder_name_mode=course_folder_mode(state['title'], settings=settings))
+        return _t('workspace_planned', path=output / base / MATERIALS / str(state.get('lecture')))
+    except (OSError, ValueError, KeyError):
+        return str(workspace)
+
+
+def _workspace_prefill(state: dict[str, Any]) -> str:
+    """Prefill W only with a lecture folder that really exists."""
+    try:
+        workspace = _workspace_for_state(state)
+    except (OSError, ValueError):
+        return ''
+    return str(workspace) if workspace is not None and (workspace / 'handoff/sources.json').is_file() else ''
+
+
+def _workspace_from_input(state: dict[str, Any], value: str) -> Path:
+    """Accept what users naturally drop on W: a lecture folder, or the source ZIP.
+
+    A ZIP is matched to the lecture it already produced (same lecture ID) in the
+    current or the course's configured output directory. Anything else gets a
+    plain explanation instead of a raw OS error.
+    """
+    candidate = Path(normalize_terminal_path(value)).expanduser()
+    if not candidate.is_absolute():
+        raise ValueError(_t('error_workspace_relative', path=candidate))
+    if candidate.is_file():
+        if candidate.suffix.lower() != '.zip':
+            raise ValueError(_t('error_workspace_not_folder', path=candidate))
+        identity = inspect_input_source(candidate)
+        roots = [Path(normalize_terminal_path(str(state.get('output_dir') or ''))).expanduser()]
+        if identity.course_title:
+            try:
+                settings = load_directory_settings()
+                roots.append(Path(resolve_output_directory(
+                    resolve_course_title(identity.course_title, settings=settings), settings=settings)))
+            except (OSError, ValueError):
+                pass
+        for root in roots:
+            try:
+                found = find_workspace(root, identity.lecture_id) if root.is_absolute() else None
+            except (OSError, ValueError):
+                found = None
+            if found is not None:
+                return found
+        raise ValueError(_t('error_workspace_zip_unprocessed', name=candidate.name))
+    if not candidate.exists():
+        raise ValueError(_t('error_workspace_missing', path=candidate))
+    workspace = resolve_workspace(candidate)
+    if not (workspace / 'handoff/sources.json').is_file():
+        raise ValueError(_t('error_workspace_not_lecture', path=candidate))
+    return workspace
+
+
 def _load_workspace_into_state(state: dict[str, Any], value: str) -> None:
-    workspace = resolve_workspace(normalize_terminal_path(value))
+    workspace = _workspace_from_input(state, value)
     sources = json.loads(read_bytes(workspace, 'handoff/sources.json'))
     if not isinstance(sources, dict) or not isinstance(sources.get('options'), dict):
         raise ValueError('请选择含有效 handoff/sources.json 的讲次文件夹')
     package = package_for_workspace(workspace)
+    state.pop('_preference_overrides', None)
     state.update(workspace=str(workspace), output_dir=str(package.parent if package else workspace.parent), lecture=str(sources.get('lecture_id') or workspace.name),
                  title=str(sources.get('course_title') or workspace.name), asset='', source_note='',
                  clear_source_note=False, _output_dir_manual=True)
@@ -774,7 +870,7 @@ def _load_preferences(storage: Path | None = None) -> dict:
 
 
 def _save_preferences(state: dict[str, Any], storage: Path | None = None) -> None:
-    payload = _safe_preferences(state)
+    payload = _safe_preferences({**state, **(state.get('_preference_overrides') or {})})
     root = _preference_root(storage)
     root.mkdir(parents=True, exist_ok=True)
     publish_bytes(root, '.handouter-preferences.json', (json.dumps(payload, ensure_ascii=False) + '\n').encode('utf-8'), replace=True)
@@ -870,6 +966,92 @@ def _handoff_matches_selection(cfg: dict[str, Any], workspace: Path) -> bool:
     )
 
 
+def _selected_input_fingerprint(cfg: dict[str, Any]) -> str | None:
+    """Identity of the selected source file, compared with the task's materials."""
+    if not cfg.get('asset'):
+        return None
+    from .stage_cache import asset_fingerprint, source_fingerprint
+    source = Path(normalize_terminal_path(str(cfg['asset'])))
+    return (asset_fingerprint(source) if cfg.get('source_kind') in {None, 'zhiyun_asset_zip', 'local_asset_package'}
+            else source_fingerprint(source))
+
+
+def _reusable_modes(cfg: dict[str, Any], workspace: Path | None) -> tuple[dict[str, str], list[str]]:
+    """({mode: finished note}, modes still to write) when a refresh would redo work.
+
+    Refreshing the Prompt creates a new task version whose outputs are new
+    files for every selected mode, so keeping Deep ticked while adding Summary
+    writes a second Deep. Offer to keep a mode only when its current note is
+    validated and the options it was written with are unchanged.
+    """
+    if (workspace is None or not workspace.is_dir() or cfg.get('source_note')
+            or not (workspace / 'handoff/sources.json').is_file()):
+        return {}, []
+    try:
+        if _handoff_matches_selection(cfg, workspace):
+            return {}, []
+        sources = json.loads(read_bytes(workspace, 'handoff/sources.json'))
+        options = sources.get('options') or {}
+        same_options = (str(options.get('format_profile') or 'clean') == str(cfg.get('format_profile') or 'clean')
+                        and bool(options.get('use_slides_as_source')) == bool(cfg.get('use_slides', True))
+                        and bool(options.get('embed_slides')) == bool(cfg.get('embed_slides'))
+                        and bool(options.get('allow_web')) == bool(cfg.get('allow_web')))
+        if not same_options:
+            return {}, []
+        from .tasks import plan_task
+        # With a source file selected, different materials must still end in the
+        # usual "new materials need a new lecture" refusal, never in a reuse offer.
+        plan = plan_task(workspace, input_fingerprint=_selected_input_fingerprint(cfg))
+    except (OSError, ValueError, KeyError, TypeError):
+        return {}, []
+    if getattr(plan, 'action', None) in {'invalid', 'busy', 'recovery_required', 'refresh_required'}:
+        return {}, []  # Only offer to keep notes of a task that is in a sound state.
+    selected = selected_modes(cfg)
+    done = {mode: path for mode, path in plan.completed.items() if mode in selected}
+    remaining = [mode for mode in selected if mode not in done]
+    return (done, remaining) if done and remaining else ({}, [])
+
+
+def _keep_finished_modes(cfg: dict[str, Any], done: dict[str, str]) -> None:
+    """Untick kept modes for this task only; saved defaults keep the user's choice."""
+    overrides = cfg.setdefault('_preference_overrides', {})
+    for mode in done:
+        field = _MODE_FIELDS[mode]
+        overrides.setdefault(field, bool(cfg.get(field)))
+        cfg[field] = False
+
+
+_MODE_FIELDS = {'deep': 'notes_deep', 'summary': 'notes_summary', 'full': 'notes_full',
+                'verbatim': 'verbatim_transcript', 'complete': 'notes_complete'}
+
+
+def _confirm_reuse(stdscr, done: dict[str, str], remaining: list[str]) -> str | None:
+    """'keep' (write only new modes), 'all' (new versions of everything) or None."""
+    _full_repaint(stdscr)
+    names = lambda modes: '、'.join(_t('mode_short_' + mode) for mode in modes)
+    rows = [_t('reuse_intro', done=names(done), remaining=names(remaining)), '']
+    rows.extend(_t('reuse_file', mode=_t('mode_short_' + mode), name=Path(path).name) for mode, path in done.items())
+    rows.extend(['', _t('reuse_keep', remaining=names(remaining)), _t('reuse_all'), _t('reuse_cancel')])
+    while True:
+        height, width = stdscr.getmaxyx()
+        stdscr.erase()
+        _safe_add(stdscr, 1, 2, _t('reuse_title'))
+        for index, row in enumerate(rows[:max(1, height - 4)]):
+            _safe_add(stdscr, index + 3, 2, _clip_columns(row, max(10, width - 4)))
+        stdscr.refresh()
+        key = stdscr.getch()
+        if key in (ord('y'), ord('Y'), 10, 13):
+            choice = 'keep'
+        elif key in (ord('a'), ord('A')):
+            choice = 'all'
+        elif key in (ord('n'), ord('N'), 27):
+            choice = None
+        else:
+            continue
+        _full_repaint(stdscr)
+        return choice
+
+
 def _task_cli_args(cfg: dict[str, Any], *, prompt_only: bool) -> tuple[list[str], str]:
     """Choose build, refresh, or Agent continuation without redoing finished ASR."""
     if cfg.get("source_note"):
@@ -904,12 +1086,7 @@ def _task_cli_args(cfg: dict[str, Any], *, prompt_only: bool) -> tuple[list[str]
         if not workspace.is_dir():
             raise ValueError(f"输出目标已存在但不是目录: {workspace}")
         from .tasks import plan_task
-        fingerprint = None
-        if cfg.get('asset'):
-            from .stage_cache import asset_fingerprint, source_fingerprint
-            source = Path(normalize_terminal_path(str(cfg['asset'])))
-            fingerprint = (asset_fingerprint(source) if cfg.get('source_kind') in {None, 'zhiyun_asset_zip', 'local_asset_package'}
-                           else source_fingerprint(source))
+        fingerprint = _selected_input_fingerprint(cfg)
         selection = {'modes': selected_modes(cfg), 'format_profile': cfg.get('format_profile') or 'clean',
                      'use_slides_as_source': bool(cfg.get('use_slides', True)), 'embed_slides': bool(cfg.get('embed_slides')),
                      'allow_web': bool(cfg.get('allow_web'))}
@@ -981,7 +1158,8 @@ def _run_task(stdscr, state: dict[str, Any], *, prompt_only: bool, command: list
         for line in process.stdout:
             clean = _diagnostic_line(line.rstrip())
             if clean.startswith("[progress]"):
-                progress_line["text"] = clean
+                # The prefix is for machines; the user only needs stage, bar and detail.
+                progress_line["text"] = clean[len("[progress]"):].strip()
             else:
                 _append_task_log(lines, line)
 
@@ -1331,7 +1509,7 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
             exporter_name = exporter.name if exporter else _t("exporter_missing")
             _panel_add(stdscr, 1, 2, right - 1, _t("hint_top", exporter=exporter_name))
             _panel_add(stdscr, 2, 2, right - 1, _t("hint_keys"))
-            _panel_add(stdscr, 3, 4, right - 3, _t('workspace_line', path=_workspace_for_state(state) or _t('workspace_none')))
+            _panel_add(stdscr, 3, 4, right - 3, _t('workspace_line', path=_workspace_display(state)))
 
             _box(stdscr, 4, 2, 10, right - 2, _t("box_source"))
             labels = [
@@ -1404,6 +1582,9 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
             label = _field_label(field_key, label)
             if kind != 'text' and 32 <= key <= 126:
                 burst = _read_paste_burst(stdscr)
+                if burst and (not burst.strip() or set(burst) == {chr(key)}):
+                    # A held-down key (auto-repeat), not a pasted path: act once.
+                    burst = ''
                 if burst:
                     # A pasted/dropped path while a button has focus: load it as the
                     # source file instead of firing one hotkey per character.
@@ -1413,7 +1594,19 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
                     except Exception as exc:
                         status = _t('status_invalid_field', label=_t('label_asset'), error=exc)
                     continue
-            if kind == 'text' and 32 <= key <= 126:
+            if kind == 'text' and key in (ord('w'), ord('W')) and field_key == 'asset' and not state.get('asset'):
+                # The top hint advertises "W opens a lecture" and the screen starts
+                # in the empty Source File field. A lone W there is the hotkey (typed
+                # paths start with a drive letter; real paths are dropped/pasted).
+                burst = _read_paste_burst(stdscr)
+                if burst:
+                    try:
+                        status = _commit_text_value(state, 'asset', chr(key) + burst) or status
+                    except Exception as exc:
+                        status = _t('status_invalid_field', label=_t('label_asset'), error=exc)
+                    continue
+                key = ord('w')
+            elif kind == 'text' and 32 <= key <= 126:
                 value, committed = _edit_value(stdscr, label, str(state[field_key]), initial=chr(key))
                 if committed:
                     try:
@@ -1430,7 +1623,7 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
                     continue
                 key = ord({18: 'w', 19: 'r', 20: 'i', 21: 'h', 22: 'n', 23: 'g'}[selected])
             if key in (ord('w'), ord('W')):
-                value, committed = _edit_value(stdscr, _t('prompt_workspace'), str(_workspace_for_state(state) or ''))
+                value, committed = _edit_value(stdscr, _t('prompt_workspace'), _workspace_prefill(state))
                 if committed and value:
                     try:
                         _load_workspace_into_state(state, value)
@@ -1546,6 +1739,7 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
             if key == ord(" "):
                 if kind == "toggle":
                     state[field_key] = not bool(state[field_key])
+                    (state.get('_preference_overrides') or {}).pop(field_key, None)
                     if field_key == "embed_slides" and state[field_key]:
                         state["use_slides"] = True
                 elif kind == "format":
@@ -1577,6 +1771,7 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
                 continue
             if kind == "toggle":
                 state[field_key] = not bool(state[field_key])
+                (state.get('_preference_overrides') or {}).pop(field_key, None)
                 if field_key == "embed_slides" and state[field_key]:
                     state["use_slides"] = True
                 continue
@@ -1652,13 +1847,28 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
                     except (OSError, ValueError) as exc:
                         status = str(exc)
                         continue
+                prompt_only = field_key == "prompt"
+                done, remaining = _reusable_modes(state, _workspace_for_state(state))
+                choice = None
+                if done:
+                    choice = _confirm_reuse(stdscr, done, remaining)
+                    if choice is None:
+                        status = _t("status_reuse_cancelled")
+                        continue
+                    if choice == 'keep':
+                        _keep_finished_modes(state, done)
+                    # Any change of modes needs a new task version (refresh), so
+                    # F5 here does what P would, instead of failing with "press P".
+                    prompt_only = True
                 try:
                     try:
                         _save_preferences(state)
                     except (OSError, ValueError):
                         pass
-                    ok, message = _run_task(stdscr, state, prompt_only=(field_key == "prompt"))
+                    ok, message = _run_task(stdscr, state, prompt_only=prompt_only)
                     status = message
+                    if done and choice == 'keep':
+                        status = _t("status_reuse_kept", done='、'.join(_t('mode_short_' + mode) for mode in done)) + ' ' + status
                     if ok:
                         paths = friendly_artifact_paths(state)
                         expected = paths.get("expected_notes", {})

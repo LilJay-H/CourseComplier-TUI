@@ -422,7 +422,7 @@ def _run_product(args: argparse.Namespace) -> int:
         source_kind, raw_source = requested[0]
         kind_map = {"audio": "local_audio", "media": "local_media", "transcript": "local_transcript"}
         source = resolve_input_source(args.input_dir, raw_source, source_kind=kind_map.get(source_kind),
-                                      cwd_first=True)
+                                      cwd_first='fallback' if getattr(args, 'input_dir_explicit', False) else True)
         identity = inspect_input_source(source, source_kind=kind_map.get(source_kind))
     else:
         source = resolve_asset_zip(args.input_dir, None)
@@ -967,6 +967,10 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return 0
         settings = None
+        if hasattr(args, 'input_dir'):
+            # An explicit --input-dir is where relative inputs live; only the
+            # saved/desktop default yields to the current directory.
+            args.input_dir_explicit = getattr(args, 'input_dir') is not None
         if hasattr(args, 'input_dir') and getattr(args, 'input_dir') is None:
             settings = load_directory_settings()
             args.input_dir = settings['input_dir']

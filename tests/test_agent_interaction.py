@@ -459,9 +459,14 @@ class AgentFailureDiagnosisTests(unittest.TestCase):
                  ("codex", "Logged in using ChatGPT", 0, "logged_in"),
                  ("codex", "Not logged in", 1, "logged_out"),
                  ("codex", "error: unknown command", 2, "unknown")]
+        def fake_run(out, code):
+            # login_status sends output to files (not pipes), so write into them.
+            def run(command, *, stdout, stderr, **_kwargs):
+                stdout.write(out.encode("utf-8"))
+                return SimpleNamespace(returncode=code)
+            return run
         for agent, out, code, expected in cases:
-            with patch("handouter.agents.diagnosis.subprocess.run",
-                       return_value=SimpleNamespace(stdout=out, stderr="", returncode=code)):
+            with patch("handouter.agents.diagnosis.subprocess.run", side_effect=fake_run(out, code)):
                 self.assertEqual(diagnosis.login_status(agent, "/fake/" + agent), expected, (agent, out))
         with patch("handouter.agents.diagnosis.subprocess.run", side_effect=OSError("boom")):
             self.assertEqual(diagnosis.login_status("claude", "/fake/claude"), "unknown")

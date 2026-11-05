@@ -108,7 +108,7 @@ def inspect_input_source(source: str | Path, *, source_kind: str | None = None) 
     return AssetIdentity(path.stem.strip() or None, "local-" + fingerprint[:12], None, kind, False)
 
 
-def _relative_input(input_dir: str | Path | None, candidate: Path, *, cwd_first: bool) -> Path:
+def _relative_input(input_dir: str | Path | None, candidate: Path, *, cwd_first: bool | str) -> Path:
     """Resolve a relative input path.
 
     Command-line users expect paths relative to the current directory, while
@@ -117,8 +117,18 @@ def _relative_input(input_dir: str | Path | None, candidate: Path, *, cwd_first:
     the input directory is used, and a missing input directory is only an
     error when the file was not found elsewhere.
     """
+    local = Path.cwd() / candidate
+    if cwd_first == 'fallback':
+        # An explicit --input-dir is searched first; the current directory is
+        # only a fallback, so a same-named file in cwd never silently wins.
+        directory = Path(input_dir if input_dir is not None else ".").expanduser().resolve()
+        inside = directory / candidate
+        if inside.is_file() or inside.is_symlink() or not (local.is_file() or local.is_symlink()):
+            if not directory.is_dir():
+                raise NotADirectoryError(f"输入目录不存在或不是目录: {directory}")
+            return inside
+        return local
     if cwd_first:
-        local = Path.cwd() / candidate
         if local.is_file() or local.is_symlink():
             return local
     directory = Path(input_dir if input_dir is not None else ".").expanduser().resolve()
@@ -131,7 +141,7 @@ def _relative_input(input_dir: str | Path | None, candidate: Path, *, cwd_first:
 
 
 def resolve_input_source(input_dir: str | Path, source: str | Path, *, source_kind: str | None = None,
-                         cwd_first: bool = False) -> Path:
+                         cwd_first: bool | str = False) -> Path:
     normalized = normalize_terminal_path(source)
     candidate = Path(normalized)
     if candidate.is_absolute():
