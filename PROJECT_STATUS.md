@@ -33,8 +33,7 @@
 
 ## 限制与未验证
 
-- TUI 保留原 FunASR/Torch SenseVoiceSmall + FSMN-VAD 路线；未安装或运行真实 ASR 原生依赖/模型，未宣称语音识别准确率。完整 setup 的真实模型准备阶段未运行。
-- 未调用真实 Codex/Claude 模型，登录、额度、CLI 上游兼容性及讲义语义质量待真实使用验证。没有团队云依赖。
-- Linux、其他 Python 版本、真实课程平台 CDN/签名链接未实测。历史 Windows 环境无法创建 symlink；本次 macOS 合成测试的权限边界与其不同。
+- TUI 沿用 FunASR/Torch SenseVoiceSmall + FSMN-VAD。真实模型与真实 Codex/Claude CLI 已在 Windows 上跑通（见文首 2026-11 一节）；语音识别准确率与讲义语义质量没有评审。没有团队云依赖。
+- Linux、macOS 真实课程链路未实测。历史 Windows 环境无法创建 symlink；本次 macOS 合成测试的权限边界与其不同。
 - 本次 wheel/sdist 和 Windows 源码启动 ZIP 不附带 FFmpeg、模型或完整离线依赖。媒体测试复用了机器现有 FFmpeg/ffprobe；其他机器需按 README 准备。
 - 独立 TUI 已托管于 `LilJay-H/CourseComplier-TUI`，仓库已公开（2026-10-30 核对）；协作者有 WRITE 权限。尚未新增许可证，公开授权和许可证仍需另行决定。

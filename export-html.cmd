@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 if not exist ".venv\Scripts\python.exe" (
-  echo Run setup-handouter.cmd first.
+  echo Run setup-course-compiler.cmd first.
   pause
   exit /b 1
 )

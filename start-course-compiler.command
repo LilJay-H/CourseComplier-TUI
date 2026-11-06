@@ -1,4 +1,8 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
-script_dir="$(cd "$(dirname "$0")" && pwd)"
-exec /bin/bash "$script_dir/start-handouter.command" "$@"
+cd -- "$(dirname -- "$0")"
+if [[ ! -x .venv/bin/python ]]; then
+  echo 'Run bash setup-course-compiler.command first.'
+  exit 1
+fi
+exec .venv/bin/python setup_handouter.py --start

@@ -47,7 +47,7 @@ class SetupTests(unittest.TestCase):
             root = Path(td)
             # Exercise only the real discovery function. Never execute the
             # bootstrap's package-manager fallback, including on regressions.
-            discovery = (setup.ROOT / 'setup-handouter.command').read_text(encoding="utf-8").split('\nrefresh_brew_path()', 1)[0]
+            discovery = (setup.ROOT / 'setup-course-compiler.command').read_text(encoding="utf-8").split('\nrefresh_brew_path()', 1)[0]
             script = root / 'discover.command'
             script.write_text(discovery + '\nfind_python\n', encoding="utf-8")
             binaries = root / 'bin'

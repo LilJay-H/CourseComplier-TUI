@@ -181,10 +181,10 @@ def publish_bytes(root: Path, relative: str, data: bytes, *, replace: bool = Fal
 
 
 def publish_exclusive(source: Path, target: Path, *, allow_copy: bool = False) -> None:
-    """Hard-link publication is atomic. Optional portable copy uses a completion marker.
+    """Hard-link publication is atomic; `allow_copy` falls back to an exclusive copy.
 
-    Readers of portable fallback must require <target>.complete. Unsupported
-    filesystems fail closed by default rather than claiming atomic publication.
+    A failed copy removes its partial target. Unsupported filesystems fail
+    closed by default rather than claiming atomic publication.
     """
     try:
         os.link(source, target)
@@ -201,8 +201,6 @@ def publish_exclusive(source: Path, target: Path, *, allow_copy: bool = False) -
             shutil.copyfileobj(src, dst, length=1024 * 1024)
             dst.flush()
             os.fsync(dst.fileno())
-        with target.with_name(target.name + '.complete').open('x', encoding='ascii') as marker:
-            marker.write(hashlib.sha256(source.read_bytes()).hexdigest() + '\n')
     except BaseException:
         if created_stat is not None:
             try:

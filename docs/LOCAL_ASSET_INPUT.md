@@ -17,7 +17,7 @@ handouter run --media lecture.mp4 --course-title "课程名" --lecture-id lectur
 handouter run --transcript transcript.txt --transcript-origin provided_transcript \
   --course-title "课程名" --lecture-id lecture-01
 
-# 智云 ZIP 或下述站点无关资产 ZIP
+# 浏览器导出 ZIP（需先配置采集插件，见 EXTERNAL_COLLECTOR.md）或下述站点无关资产 ZIP
 handouter run --asset lecture.zip
 ```
 

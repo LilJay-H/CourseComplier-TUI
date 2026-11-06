@@ -197,8 +197,6 @@ def _run_cli_agent(
         command = adapter.build_command(task, model=model)
         if authoring_policy:
             (task / 'authoring').mkdir(exist_ok=True)
-        from ..invocation_receipts import begin_observation, finish_observation, encoded as receipt_encoded
-        started_observation = begin_observation(command, snapshot, prompt + CLI_FOOTER, name, model)
         returncode, tail = run_forwarding(command, input_text=prompt + CLI_FOOTER, cwd=task)
         completed = SimpleNamespace(returncode=returncode)
         failure_hint = diagnose(name, returncode, tail)
@@ -383,9 +381,6 @@ def _run_cli_agent(
         publish_bytes(root, 'state.json', (json.dumps(state, ensure_ascii=False, indent=2) + '\n').encode('utf-8'), replace=True)
     except (OSError, ValueError, json.JSONDecodeError):
         errors.append('无法安全提交任务状态；已发布成果保留，请重新核验')
-
-    finish_observation(started_observation, completed.returncode,
-        receipt_encoded({relative: hashlib.sha256(data).hexdigest() for relative, data in verified_outputs.items()}), errors)
 
     return AgentRunResult(
         agent=name,

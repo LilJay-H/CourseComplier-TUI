@@ -20,17 +20,7 @@ def branded_env(legacy_name: str, default: str | None = None) -> str | None:
         raise ValueError("expected a legacy Handouter environment variable")
     current_name = "COURSE_COMPILER_" + legacy_name[len("HANDOUTER_"):]
     if current_name in os.environ:
-        value = os.environ[current_name]
-        if legacy_name == "HANDOUTER_REQUIRE_TMPFS" and value not in {"0", "1"}:
-            raise ValueError(f"{current_name} must be '0' or '1'")
-        return value
+        return os.environ[current_name]
     if legacy_name in os.environ:
         return os.environ[legacy_name]
     return default
-
-
-def required_branded_env(legacy_name: str) -> str:
-    value = branded_env(legacy_name)
-    if value is None or not value.strip():
-        raise KeyError("COURSE_COMPILER_" + legacy_name[len("HANDOUTER_"):])
-    return value
