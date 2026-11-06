@@ -76,7 +76,7 @@ def inspect_input_source(source: str | Path, *, source_kind: str | None = None) 
     if not path.is_file():
         raise FileNotFoundError(f"输入不存在或不是普通文件: {path}")
     from .importers import (LOCAL_ASSET_MANIFEST, LOCAL_AUDIO_SUFFIXES, LOCAL_MEDIA_SUFFIXES,
-                            LOCAL_TRANSCRIPT_SUFFIXES, inspect_local_asset_zip)
+                            LOCAL_TRANSCRIPT_SUFFIXES)
     suffix = path.suffix.lower()
     kind = source_kind
     if kind is None and suffix == ".zip":
@@ -91,7 +91,8 @@ def inspect_input_source(source: str | Path, *, source_kind: str | None = None) 
     if kind == "zhiyun_asset_zip":
         return inspect_asset_zip(path)
     if kind == "local_asset_package":
-        metadata = inspect_local_asset_zip(path)
+        from handouter_local.assets import peek
+        metadata = peek(path)
         from .stage_cache import asset_fingerprint
         fingerprint = asset_fingerprint(path)
         return AssetIdentity(metadata["course_title"], metadata["lecture_id"] or "local-" + fingerprint[:12],

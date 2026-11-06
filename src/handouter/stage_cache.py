@@ -22,8 +22,26 @@ def _media_identity(url: str) -> str:
     return parsed._replace(query=urlencode(query), fragment='').geturl()
 
 
+_FINGERPRINTS: dict[tuple, str] = {}
+
+
 def asset_fingerprint(path: str | Path) -> str:
-    """Content identity excludes private URL query rotation, never stores URLs."""
+    """Content identity excludes private URL query rotation, never stores URLs.
+
+    A standard package is hashed member by member (its video included), and one
+    run asks several times, so the result is reused while the file is unchanged.
+    """
+    resolved = Path(path).resolve()
+    status = resolved.stat()
+    key = (str(resolved), status.st_size, status.st_mtime_ns)
+    if key not in _FINGERPRINTS:
+        if len(_FINGERPRINTS) >= 64:
+            _FINGERPRINTS.clear()
+        _FINGERPRINTS[key] = _asset_fingerprint(resolved)
+    return _FINGERPRINTS[key]
+
+
+def _asset_fingerprint(path: Path) -> str:
     digest = hashlib.sha256()
     with zipfile.ZipFile(path) as archive:
         if "handouter-input.json" not in archive.namelist():
@@ -31,7 +49,8 @@ def asset_fingerprint(path: str | Path) -> str:
             details = inspect_browser_export(path)
             return details.get("source_fingerprint") or details["source_sha256"]
         infos = archive.infolist()
-        if len(infos) > 10000 or sum(i.file_size for i in infos) > 512 * 1024 * 1024:
+        from handouter_local.assets import MAX_MEMBERS, _local_budget
+        if len(infos) > MAX_MEMBERS or sum(i.file_size for i in infos) > _local_budget():
             raise ValueError('资产超出安全大小限制')
         names = set()
         for info in sorted(infos, key=lambda i: i.filename):

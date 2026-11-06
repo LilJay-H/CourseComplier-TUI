@@ -277,7 +277,9 @@ def configure(executable: str, sha256: str, tool_id: str, exporter_script: str |
     value = {"executable": str(Path(executable).expanduser().absolute()), "sha256": sha256.lower(),
              "tool_id": tool_id, "exporter_script": str(Path(exporter_script).expanduser().absolute()) if exporter_script else None}
     _validated(value)
-    _identity(value)
+    _identity(value)  # Always a fresh identity check, never the cache.
+    _INSPECTED.clear()
+    _CAPABILITIES.clear()
     path = configuration_path()
     _check_config_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -300,10 +302,33 @@ def _binding(config: dict) -> str:
     return hashlib.sha256(json.dumps({key: config[key] for key in ("executable", "sha256", "tool_id")}, sort_keys=True).encode()).hexdigest()
 
 
+# One CLI run used to inspect the same export five times (each an identity plus
+# an inspect process). Results are reused within this process while the
+# source file and the configured plugin are unchanged; every process that does
+# start still has its executable digest checked first (_invoke -> _validated).
+_INSPECTED: dict[tuple, dict] = {}
+_CAPABILITIES: dict[tuple, list] = {}
+
+
+def _file_key(path: Path) -> tuple:
+    status = path.stat()
+    return str(path), status.st_size, status.st_mtime_ns
+
+
+def _capabilities(config: dict) -> list:
+    key = (_binding(config), *_file_key(Path(config["executable"])))
+    if key not in _CAPABILITIES:
+        _CAPABILITIES[key] = _identity(config)
+    return _CAPABILITIES[key]
+
+
 def inspect_browser_export(source: str | Path, *, configuration: dict | None = None) -> dict:
     config = load_configuration() if configuration is None else configuration
-    _identity(config)
     source = _regular(Path(source).expanduser().absolute())
+    key = (_binding(config), *_file_key(Path(config["executable"])), *_file_key(source))
+    if key in _INSPECTED:
+        return dict(_INSPECTED[key])
+    _capabilities(config)
     frame = _invoke(config, "inspect", {"source_path": str(source)})
     title = frame.get("course_title")
     day = frame.get("lecture_date")
@@ -338,6 +363,9 @@ def inspect_browser_export(source: str | Path, *, configuration: dict | None = N
         if not isinstance(frame["source_fingerprint"], str) or not re.fullmatch(r"[0-9a-f]{64}", frame["source_fingerprint"]):
             raise ValueError("COLLECTOR_PROTOCOL: 插件来源指纹无效")
         result["source_fingerprint"] = frame["source_fingerprint"]
+    if len(_INSPECTED) >= 64:
+        _INSPECTED.clear()
+    _INSPECTED[key] = dict(result)
     return result
 
 
@@ -350,7 +378,7 @@ def convert_browser_export(source: str | Path, output: str | Path, *, allowed_me
         raise ValueError("SOURCE_CHANGED: 原始资产已变化，请重新确认")
     if set(allowed_media_hosts) != set(details["media_hosts"]):
         raise ValueError("COLLECTOR_HOST_CONFIRMATION: 请确认预检显示的全部媒体域名后重试")
-    capabilities = _identity(config)
+    capabilities = _capabilities(config)
     target = Path(output).expanduser().absolute()
     if target.exists() or target.is_symlink() or not target.parent.is_dir():
         raise ValueError("COLLECTOR_OUTPUT: 输出必须是新的标准包路径")

@@ -1,21 +1,13 @@
-"""Workspace paths and non-overwriting publication.
+"""Workspace locks and exclusive directory publication.
 
-The selected root may itself be a platform alias (e.g. macOS /var). Links below
-that root are forbidden. POSIX reads walk directory descriptors with NOFOLLOW;
-Windows additionally rejects reparse points and verifies the opened identity.
-These checks do not sandbox a process with arbitrary OS access.
+Path validation, safe reads and file publication live in safe_io_core and are
+re-exported here for existing callers.
 """
 from contextlib import contextmanager
-import hashlib
 import json
 import os
 from pathlib import Path
-import re
-import shutil
-import stat
 import threading
-import unicodedata
-import uuid
 import sys
 from functools import wraps
 

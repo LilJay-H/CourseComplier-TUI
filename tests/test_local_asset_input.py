@@ -7,9 +7,12 @@ from unittest.mock import patch
 import zipfile
 
 from handouter import cli, tui
-from handouter.importers import import_local_asset_zip, inspect_local_asset_zip
+from handouter_local.assets import inspect as inspect_package, peek
 from handouter.product import inspect_input_source
 from handouter.service import BuildResult, build_from_local_asset_zip
+
+# Real m4a files start with an ftyp box; standard packages check media headers.
+M4A = b"\x00\x00\x00\x18ftypM4A "
 
 
 class LocalAssetInputTests(unittest.TestCase):
@@ -54,7 +57,7 @@ class LocalAssetInputTests(unittest.TestCase):
         manifest = self.transcript_manifest()
         files = {
             "transcript/transcript.txt": "用户提供的转写。",
-            "audio/lecture.m4a": b"synthetic evidence audio",
+            "audio/lecture.m4a": M4A + b"synthetic evidence audio",
             "transcript/segments.json": json.dumps([{"id": "seg-0001", "start_ms": 0,
                 "end_ms": 1000, "text": "用户提供的转写。", "timestamp_kind": "provided", "speaker": None}]),
             "slides/images/slide_001.png": b"\x89PNG\r\n\x1a\nsynthetic",
@@ -70,15 +73,47 @@ class LocalAssetInputTests(unittest.TestCase):
         self.assertEqual(workspace_manifest["source_type"], "local_asset_package")
         self.assertEqual(workspace_manifest["transcript"]["origin"], "provided_transcript")
         self.assertEqual((result.workspace / "transcript/transcript.txt").read_text(encoding="utf-8"), "用户提供的转写。")
-        self.assertEqual((result.workspace / "audio/source.m4a").read_bytes(), b"synthetic evidence audio")
+        self.assertEqual((result.workspace / "audio/source.m4a").read_bytes(), M4A + b"synthetic evidence audio")
         self.assertTrue((result.workspace / "slides/images/slide_001.png").is_file())
         from handouter.agents.manual import selected_files
         self.assertNotIn("audio/source.m4a", selected_files(result.workspace,
             json.loads((result.workspace / "handoff/sources.json").read_text(encoding="utf-8"))))
 
+    def test_user_package_uses_the_streaming_checker_without_the_old_512_mib_cap(self):
+        archive = self.package({"schema_version": 1, "audio": {"path": "audio/lesson.m4a"}},
+                               {"audio/lesson.m4a": M4A + b"x" * 64})
+        with patch("handouter.importers.MAX_ZIP_BYTES", 1), \
+             patch.object(zipfile.ZipFile, "read", side_effect=AssertionError("whole member read into memory")), \
+             patch("handouter.service.build_from_audio", return_value="built"):
+            self.assertEqual(build_from_local_asset_zip(self.root / "out", lecture_id="big",
+                             course_title="Big", asset_zip=archive), "built")
+
+    def test_archiver_junk_is_ignored_but_other_undeclared_files_are_rejected(self):
+        manifest = {"schema_version": 1, "lecture": {"id": "junk-ok"}, "transcript": {"path": "text.txt"}}
+        archive = self.package(manifest, {"text.txt": "text", "__MACOSX/._text.txt": b"\x00\x05",
+                                          ".DS_Store": b"junk", "sub/Thumbs.db": b"junk"}, name="junk.zip")
+        self.assertEqual(peek(archive)["lecture_id"], "junk-ok")
+        self.assertEqual(inspect_package(archive).lecture_id, "junk-ok")
+        stray = self.package(manifest, {"text.txt": "text", "notes/draft.docx": b"PK"}, name="stray.zip")
+        with self.assertRaisesRegex(ValueError, "没有声明的文件"):
+            peek(stray)
+
+    def test_peek_reads_only_the_manifest(self):
+        archive = self.package({"schema_version": 1, "lecture": {"id": "peek-1", "course_title": "Peek"},
+                                "audio": {"path": "a.m4a"}}, {"a.m4a": M4A + b"y" * 32})
+        opened = []
+        original = zipfile.ZipFile.open
+        def track(archive_self, name, *args, **kwargs):
+            opened.append(getattr(name, "filename", name))
+            return original(archive_self, name, *args, **kwargs)
+        with patch.object(zipfile.ZipFile, "open", track):
+            self.assertEqual(peek(archive), {"course_title": "Peek", "lecture_id": "peek-1",
+                                             "lecture_date": None, "has_slides": False})
+        self.assertEqual(opened, ["handouter-input.json"])
+
     def test_audio_only_package_dispatches_to_existing_audio_pipeline(self):
         manifest = {"schema_version": 1, "audio": {"path": "audio/lesson.m4a"}}
-        archive = self.package(manifest, {"audio/lesson.m4a": b"synthetic audio"})
+        archive = self.package(manifest, {"audio/lesson.m4a": M4A + b"synthetic audio"})
         sentinel = object()
         captured = {}
         def consume(*_args, **kwargs):
@@ -88,7 +123,7 @@ class LocalAssetInputTests(unittest.TestCase):
             result = build_from_local_asset_zip(self.root / "out", lecture_id="audio-lecture",
                 course_title="Audio", asset_zip=archive)
         self.assertIs(result, sentinel)
-        self.assertEqual(captured["audio"], b"synthetic audio")
+        self.assertEqual(captured["audio"], M4A + b"synthetic audio")
         self.assertEqual(build.call_args.kwargs["source_type"], "local_asset_package")
 
     def test_manifest_identity_and_tui_direct_audio_mapping(self):
@@ -165,10 +200,10 @@ class LocalAssetInputTests(unittest.TestCase):
             with self.subTest(index=index):
                 archive = self.package(manifest, name=f"bad-{index}.zip")
                 with self.assertRaises(ValueError):
-                    inspect_local_asset_zip(archive)
+                    peek(archive)
         missing = self.package({"schema_version": 1, "transcript": {"path": "missing.txt"}}, name="missing.zip")
         with self.assertRaises(ValueError):
-            import_local_asset_zip(missing, self.root / "missing-out")
+            inspect_package(missing)
         link = self.root / "linked.zip"
         try:
             link.symlink_to(missing)

@@ -8,6 +8,7 @@ import uuid
 import tempfile
 import time
 from dataclasses import dataclass
+from types import SimpleNamespace
 from pathlib import Path
 from typing import Callable
 
@@ -20,7 +21,7 @@ def _progress(callback: ProgressCallback | None, stage: str, percent: int, detai
 
 from .asr import ASRResult, transcribe_sensevoice
 from .handoff import HandoffSummary, create_handoff
-from .importers import import_local_asset_zip, import_slides_zip
+from .importers import import_slides_zip
 from .media import AudioExtractResult, extract_audio
 from .validation import ValidationReport, validate_workspace
 from .workspace import WorkspaceSummary, create_workspace, read_json, validate_lecture_id
@@ -471,19 +472,19 @@ def build_from_local_asset_zip(
     """Site-neutral local asset ZIP -> existing preparation/ASR pipelines."""
     from .stage_cache import asset_fingerprint
     identity = input_fingerprint or asset_fingerprint(asset_zip)
+    # One standard-package implementation for user-made and plugin-made ZIPs:
+    # full inspection (headers, sizes, CRCs) then streaming extraction of the
+    # declared members only.
+    from handouter_local.assets import extract, inspect as inspect_package
+    checked = checked_asset if checked_asset is not None else inspect_package(asset_zip)
+    if checked.source != Path(asset_zip).resolve():
+        raise ValueError("预检标准包与所选资源不匹配")
     with tempfile.TemporaryDirectory(prefix="handouter-local-assets-") as temporary:
-        if checked_asset is None:
-            package = import_local_asset_zip(asset_zip, Path(temporary) / "input")
-        else:
-            from handouter_local.assets import extract
-            from .importers import LocalAssetPackage
-            if checked_asset.source != Path(asset_zip).resolve():
-                raise ValueError("预检标准包与所选资源不匹配")
-            paths = extract(checked_asset, Path(temporary) / "input")
-            package = LocalAssetPackage(Path(temporary) / "input", checked_asset.course_title, None,
-                checked_asset.lecture_date, paths.get("transcript"), checked_asset.roles.get("transcript_origin"),
-                paths.get("segments_path"), paths.get("raw_asr_path"), paths.get("audio"), paths.get("media"),
-                paths.get("images_dir"), paths.get("metadata_path"))
+        paths = extract(checked, Path(temporary) / "input")
+        package = SimpleNamespace(transcript=paths.get("transcript"),
+            transcript_origin=checked.roles.get("transcript_origin"), segments=paths.get("segments_path"),
+            raw_asr=paths.get("raw_asr_path"), audio=paths.get("audio"), media=paths.get("media"),
+            slides_dir=paths.get("images_dir"), slides_meta=paths.get("metadata_path"))
         slides = package.slides_dir
         common = dict(lecture_id=lecture_id, course_title=course_title,
             slides_dir=slides, slides_meta=package.slides_meta,

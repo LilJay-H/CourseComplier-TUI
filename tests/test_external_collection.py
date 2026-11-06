@@ -150,9 +150,7 @@ time.sleep(30)
         self.configure()
         skill = self.root / "SKILL.md"
         skill.write_text("# Synthetic test skill\nUse only supplied evidence.\n", encoding="utf-8")
-        with patch("handouter.importers.MAX_ZIP_BYTES", 1), \
-                patch("handouter.service.import_local_asset_zip", side_effect=AssertionError("legacy bounded importer used")), \
-                patch.object(zipfile.ZipFile, "read", side_effect=AssertionError("whole ZIP member read")):
+        with patch.object(zipfile.ZipFile, "read", side_effect=AssertionError("whole ZIP member read")):
             result = build_from_asset_zip(self.root / "workspaces", asset_zip=self.source,
                 lecture_id="synthetic-course", course_title="Synthetic course", skill_path=skill,
                 use_slides_as_source=False, allowed_media_hosts=["media.example.test"])

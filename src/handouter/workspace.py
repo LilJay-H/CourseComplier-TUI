@@ -9,13 +9,12 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 import shutil
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
+from .importers import _clock_to_ms, _seconds_to_ms  # one time parser for slide metadata
 from .platform_support import is_portable_path_component
 
 SCHEMA_VERSION = "1"
@@ -72,43 +71,6 @@ def validate_lecture_id(lecture_id: str) -> str:
     if len(value) > 120 or not is_portable_path_component(value):
         raise ValueError("lecture_id 必须是 1-120 个字符且可作为 macOS/Windows/Linux 目录名")
     return value
-
-
-def _seconds_to_ms(value: Any) -> int:
-    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
-        raise ValueError("seconds 必须是有限的非负秒数")
-    try:
-        seconds = Decimal(str(value))
-    except InvalidOperation as exc:
-        raise ValueError("seconds 不是有效数字") from exc
-    if not seconds.is_finite() or seconds < 0:
-        raise ValueError("seconds 必须是有限的非负秒数")
-    milliseconds = seconds * 1000
-    if milliseconds != milliseconds.to_integral_value():
-        raise ValueError("时间精度小于 1ms，拒绝静默舍入")
-    return int(milliseconds)
-
-
-def _clock_to_ms(value: str) -> int:
-    if not isinstance(value, str):
-        raise ValueError("时间必须是 HH:MM:SS 或 MM:SS 字符串")
-    parts = value.strip().split(":")
-    if len(parts) not in (2, 3):
-        raise ValueError(f"无效时间字符串: {value!r}")
-    if not all(re.fullmatch(r"\d+", part) for part in parts[:-1]):
-        raise ValueError(f"无效时间字符串: {value!r}")
-    if not re.fullmatch(r"\d{1,2}(?:\.\d{1,3})?", parts[-1]):
-        raise ValueError(f"无效时间字符串: {value!r}")
-    second_ms = _seconds_to_ms(parts[-1])
-    if second_ms >= 60_000:
-        raise ValueError(f"秒字段越界: {value!r}")
-    if len(parts) == 3:
-        if int(parts[1]) >= 60:
-            raise ValueError(f"分钟字段越界: {value!r}")
-        minutes = int(parts[0]) * 60 + int(parts[1])
-    else:
-        minutes = int(parts[0])
-    return minutes * 60_000 + second_ms
 
 
 def _record_start_ms(item: dict[str, Any]) -> int | None:

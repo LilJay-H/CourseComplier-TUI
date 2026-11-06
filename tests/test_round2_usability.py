@@ -155,6 +155,43 @@ class CollectionReuseTests(unittest.TestCase):
         build.assert_not_called()
 
 
+class CollectorReuseWithinProcessTests(unittest.TestCase):
+    def test_same_export_is_inspected_once_until_it_changes(self):
+        import hashlib
+        from handouter import external_collector as host
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            plugin = root / 'plugin.exe'
+            plugin.write_bytes(b'MZ synthetic')
+            source = root / 'browser.zip'
+            source.write_bytes(b'export one')
+            config = {'executable': str(plugin), 'sha256': 'a' * 64, 'tool_id': 'org.example.fixture',
+                      'exporter_script': None}
+            calls = []
+            def invoke(_config, method, params, **_kwargs):
+                calls.append(method)
+                data = Path(params['source_path']).read_bytes()
+                return {'type': 'inspection', 'tool_id': 'org.example.fixture', 'protocol_version': 1,
+                        'course_title': '合成课程', 'lecture_date': None, 'media_hosts': ['media.example.test'],
+                        'source_sha256': hashlib.sha256(data).hexdigest()}
+            host._INSPECTED.clear()
+            host._CAPABILITIES.clear()
+            with patch.object(host, 'load_configuration', return_value=config), \
+                 patch.object(host, '_identity', side_effect=lambda _c: calls.append('identity') or ['inspect', 'convert']), \
+                 patch.object(host, '_invoke', side_effect=invoke):
+                first = host.inspect_browser_export(source)
+                for _ in range(4):
+                    self.assertEqual(host.inspect_browser_export(source), first)
+                self.assertEqual(calls, ['identity', 'inspect'])
+                time.sleep(0.01)
+                source.write_bytes(b'export two, re-exported')
+                second = host.inspect_browser_export(source)
+                self.assertNotEqual(second['source_sha256'], first['source_sha256'])
+                self.assertEqual(calls, ['identity', 'inspect', 'inspect'])
+            host._INSPECTED.clear()
+            host._CAPABILITIES.clear()
+
+
 class CollectorByteProgressTests(unittest.TestCase):
     def test_byte_frames_fill_the_download_part_of_the_bar(self):
         from handouter.external_collector import _progress_display
@@ -182,7 +219,7 @@ class CollectorByteProgressTests(unittest.TestCase):
                     return {'output_path': str(target)}
                 with patch.object(host, 'load_configuration', return_value={}), \
                      patch.object(host, 'inspect_browser_export', return_value=details), \
-                     patch.object(host, '_identity', return_value=capabilities), \
+                     patch.object(host, '_capabilities', return_value=capabilities), \
                      patch.object(host, '_invoke', side_effect=invoke), \
                      patch('handouter_local.assets.inspect', return_value=SimpleNamespace(source_kind='asset_zip')):
                     host.convert_browser_export(Path(directory) / 'browser.zip', target,
