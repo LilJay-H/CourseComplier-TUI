@@ -10,7 +10,6 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import re
 import shutil
 import stat
 import unicodedata
@@ -20,12 +19,10 @@ import uuid
 def relative_path(value: str) -> str:
     if not isinstance(value, str) or not value or '\\' in value:
         raise ValueError('路径必须是安全相对路径')
+    from .platform_support import is_portable_path_component
     parts = value.split('/')
-    for part in parts:
-        if (part in {'', '.', '..'} or part.endswith((' ', '.'))
-                or re.search(r'[\x00-\x1f<>:"|?*]', part)
-                or re.fullmatch(r'(?i)(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?', part)):
-            raise ValueError('不安全的相对路径组件')
+    if not all(is_portable_path_component(part) for part in parts):
+        raise ValueError('不安全的相对路径组件')
     return '/'.join(parts)
 
 
@@ -181,10 +178,10 @@ def publish_bytes(root: Path, relative: str, data: bytes, *, replace: bool = Fal
 
 
 def publish_exclusive(source: Path, target: Path, *, allow_copy: bool = False) -> None:
-    """Hard-link publication is atomic. Optional portable copy uses a completion marker.
+    """Hard-link publication is atomic; `allow_copy` falls back to an exclusive copy.
 
-    Readers of portable fallback must require <target>.complete. Unsupported
-    filesystems fail closed by default rather than claiming atomic publication.
+    A failed copy removes its partial target. Unsupported filesystems fail
+    closed by default rather than claiming atomic publication.
     """
     try:
         os.link(source, target)
@@ -201,8 +198,6 @@ def publish_exclusive(source: Path, target: Path, *, allow_copy: bool = False) -
             shutil.copyfileobj(src, dst, length=1024 * 1024)
             dst.flush()
             os.fsync(dst.fileno())
-        with target.with_name(target.name + '.complete').open('x', encoding='ascii') as marker:
-            marker.write(hashlib.sha256(source.read_bytes()).hexdigest() + '\n')
     except BaseException:
         if created_stat is not None:
             try:

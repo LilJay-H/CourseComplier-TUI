@@ -125,7 +125,7 @@ def render_note(note: Path, root: Path, theme: str | None = None, *, math_warnin
         from mdit_py_plugins.dollarmath import dollarmath_plugin
         from latex2mathml.converter import convert
     except ImportError as exc:
-        raise RuntimeError('HTML 导出依赖未安装，请重新运行 setup-handouter 安装脚本') from exc
+        raise RuntimeError('HTML 导出依赖未安装，请重新运行 setup-course-compiler 安装脚本') from exc
 
     def math_renderer(content, options):
         content = (content or '').strip()

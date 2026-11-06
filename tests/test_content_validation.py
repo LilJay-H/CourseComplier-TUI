@@ -28,7 +28,7 @@ class ContentValidationTests(unittest.TestCase):
         self.workspace = prepare_lecture(self.root / 'out', lecture_id='content', course_title='合成测试',
                                          transcript=source, use_slides_as_source=False).workspace
         self.sources_path = self.workspace / 'handoff/sources.json'
-        self.sources = json.loads(self.sources_path.read_text())
+        self.sources = json.loads(self.sources_path.read_text(encoding="utf-8"))
         self.note = self.workspace / self.sources['expected_output']
         self.images = self.workspace / 'slides/images'
         self.images.mkdir(parents=True, exist_ok=True)
@@ -36,7 +36,7 @@ class ContentValidationTests(unittest.TestCase):
 
     def validate(self, text, *, slides=False, embed=False, web=False):
         self.sources['options'].update(use_slides_as_source=slides, embed_slides=embed, allow_web=web)
-        self.sources_path.write_text(json.dumps(self.sources))
+        self.sources_path.write_text(json.dumps(self.sources), encoding="utf-8")
         self.note.write_text(text, encoding='utf-8')
         return validate_note_output(self.workspace)
 
@@ -51,9 +51,9 @@ class ContentValidationTests(unittest.TestCase):
 
     def test_prompt_nested_math_passes_but_known_placeholder_fails(self):
         prompt = self.workspace / 'handoff/PROMPT.md'
-        prompt.write_text(prompt.read_text() + '\n' + r'$\frac{1}{\sqrt{x}}$')
+        prompt.write_text(prompt.read_text(encoding="utf-8") + '\n' + r'$\frac{1}{\sqrt{x}}$', encoding="utf-8")
         self.assertTrue(validate_workspace(self.workspace).ok)
-        prompt.write_text(prompt.read_text() + '\n{{expected_outputs_one_per_line}}')
+        prompt.write_text(prompt.read_text(encoding="utf-8") + '\n{{expected_outputs_one_per_line}}', encoding="utf-8")
         self.assertFalse(validate_workspace(self.workspace).ok)
 
     def test_teaching_assignments_pass_all_consumers(self):
@@ -61,7 +61,7 @@ class ContentValidationTests(unittest.TestCase):
         self.assertTrue(self.validate(text).ok)
         self.assertEqual(read_revision_note(self.note)['text'], text)
         self.assertEqual(_evidence_text(text.encode()), text)
-        self.assertIn('token = 0', create_web_handoff(self.workspace).materials.read_text())
+        self.assertIn('token = 0', create_web_handoff(self.workspace).materials.read_text(encoding="utf-8"))
 
     def test_uncertain_assignment_warns_without_echo(self):
         text = 'token = lesson_value'
@@ -118,7 +118,7 @@ class ContentValidationTests(unittest.TestCase):
                 report = self.validate(text, slides=True, embed=True)
                 self.assertTrue(report.ok, report.errors)
                 self.assertEqual(report.image_links, 1)
-                html = export_html(self.note)[0].read_text()
+                html = export_html(self.note)[0].read_text(encoding="utf-8")
                 self.assertIn('data:image/png;base64,', html)
                 self.assertIn("default-src 'none'", html)
 
@@ -171,7 +171,7 @@ class ContentValidationTests(unittest.TestCase):
         (self.images / 'PPT #1.png').write_bytes(PNG)
         report = self.validate('![图](../slides/images/PPT%20%231.png)', slides=True, embed=True)
         self.assertTrue(report.ok, report.errors)
-        self.assertIn('data:image/png;base64,', export_html(self.note)[0].read_text())
+        self.assertIn('data:image/png;base64,', export_html(self.note)[0].read_text(encoding="utf-8"))
         self.assertFalse(self.validate('<a href="http://[">bad</a>').ok)
 
     def test_chinese_english_technical_information_survives_asr(self):
@@ -183,13 +183,13 @@ class ContentValidationTests(unittest.TestCase):
             self.assertIn(value, text)
 
     def test_control_json_must_be_objects(self):
-        self.note.write_text('# 测试讲义')
+        self.note.write_text('# 测试讲义', encoding="utf-8")
         for relative in ('manifest.json', 'state.json', 'handoff/sources.json'):
             with self.subTest(relative=relative):
                 path = self.workspace / relative
                 before = path.read_bytes()
                 try:
-                    path.write_text('[]')
+                    path.write_text('[]', encoding="utf-8")
                     self.assertFalse(validate_workspace(self.workspace).ok)
                     if relative != 'manifest.json':
                         self.assertFalse(validate_note_output(self.workspace).ok)
@@ -207,7 +207,7 @@ class ContentValidationTests(unittest.TestCase):
 
         # 3. details blank lines in complete mode should warn
         self.sources['mode'] = 'complete'
-        self.sources_path.write_text(json.dumps(self.sources))
+        self.sources_path.write_text(json.dumps(self.sources), encoding="utf-8")
         broken_fold = (
             '# 标题\n\n'
             '<details class="complete-detail">\n'

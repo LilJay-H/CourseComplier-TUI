@@ -17,7 +17,7 @@ handouter run --media lecture.mp4 --course-title "课程名" --lecture-id lectur
 handouter run --transcript transcript.txt --transcript-origin provided_transcript \
   --course-title "课程名" --lecture-id lecture-01
 
-# 智云 ZIP 或下述站点无关资产 ZIP
+# 浏览器导出 ZIP（需先配置采集插件，见 EXTERNAL_COLLECTOR.md）或下述站点无关资产 ZIP
 handouter run --asset lecture.zip
 ```
 
@@ -93,7 +93,7 @@ lecture.zip
 
 | 字段 | 必需 | 含义 |
 | --- | --- | --- |
-| `schema_version` | 是 | 当前固定为整数 `1` |
+| `schema_version` | 是 | 整数 `1`（也接受 `2`） |
 | `lecture.id` | 否 | 稳定讲次 ID；仅字母、数字、`_`、`-` |
 | `lecture.course_title` | 否 | 显示标题；CLI 参数可覆盖 |
 | `lecture.lecture_date` | 否 | 真实授课日期 `YYYY-MM-DD`；未知省略 |
@@ -154,9 +154,10 @@ segments 继续使用 Course Compiler 的整数毫秒契约：
 
 ## 5. 安全边界
 
-- ZIP 最多 10,000 个成员、总未压缩大小 512 MiB；单张图片最多 32 MiB，清单/元数据最多 8 MiB。
-- 拒绝路径穿越、绝对路径、空路径段、符号链接、加密成员和跨平台歧义文件名。
-- 图片必须有真实 PNG/JPEG/WebP 文件头；JSON 与 TXT 必须是有效 UTF-8。
+- 自己打包的标准 ZIP 和插件生成的标准 ZIP 用同一套检查：最多 10,000 个成员，总未压缩大小 8 GiB（单个音视频 7 GiB，可用 `COURSE_COMPILER_LOCAL_MAX_BYTES` 在 1–64 GiB 之间调整），单张图片最多 32 MiB，清单/元数据最多 16 MiB。成员按流式解压，不会整份读进内存。
+- 只接受清单里声明的文件；打包工具自动加入的 `__MACOSX/`、`.DS_Store`、`Thumbs.db`、`desktop.ini` 会被忽略，其他没声明的文件会被拒绝。
+- 拒绝路径穿越、绝对路径、空路径段、符号链接、加密成员和跨平台歧义文件名，路径须为 NFC Unicode。
+- 图片和音视频必须有与扩展名相符的真实文件头；JSON 与 TXT 必须是有效 UTF-8。
 - 本地资产协议不接受 URL、Cookie、token、签名媒体地址或 `private/source.json`。需要联网媒体时继续使用明确授权的高级 `build-media` 入口。
 - 输入只读，目标工作区排他创建；不会覆盖原始音频、转写、PPT、旧工作区或既有讲义。
 - Agent handoff 仍排除音频、raw ASR、状态文件和私有材料；只提供经过筛选的转写、PPT 与规则快照。

@@ -14,6 +14,7 @@ CORE = (
     'test_build_backend', 'test_tui_workflow', 'test_tui_directories',
     'test_local_asset_input', 'test_media_asr_alignment', 'test_setup_handouter',
     'test_local_agent_workflow', 'test_local_editorial', 'test_split_distribution', 'test_external_collection',
+    'test_tui_language', 'test_round2_usability',
 )
 FULL = CORE + ('test_handoff_workspace', 'test_agent_interaction',
     'test_task_workflow', 'test_delivery_copy', 'test_html_export',

@@ -4,11 +4,15 @@ import hashlib
 import json
 
 from .authoring_audit import source_scope, validate_scan, _source_ranges
-from .authoring_eval import encoded
 from .output_refs import resolve_output_ref
 from .safe_io import read_bytes
 from .source_refs import parse_ref, resolve_ref
 from .quality_host import unicode_spans
+
+
+def encoded(value) -> bytes:
+    """Readable JSON bytes for audit views (format is part of their digests)."""
+    return (json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + '\n').encode('utf-8')
 
 SOURCE_VIEW = 'handoff/source-chunk.json'
 MAX_IMAGE_BYTES = 6 * 1024 * 1024

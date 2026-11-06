@@ -24,12 +24,12 @@ class HTMLRequestPolicyTests(unittest.TestCase):
             transcript=source, modes=['deep', 'summary'],
             use_slides_as_source=False, organized=True).workspace
         self.outputs = json.loads(
-            (self.workspace / 'handoff/sources.json').read_text())['expected_outputs']
+            (self.workspace / 'handoff/sources.json').read_text(encoding="utf-8"))['expected_outputs']
         self.returned = self.root / 'returned.md'
         self.returned.write_text('# Synthetic\n\nCourse content.\n', encoding='utf-8')
 
     def state(self):
-        return json.loads((self.workspace / 'state.json').read_text())
+        return json.loads((self.workspace / 'state.json').read_text(encoding="utf-8"))
 
     def import_without_html(self, mode):
         return import_note(self.workspace, self.returned, mode=mode,

@@ -290,9 +290,14 @@ class AgentInteractionTests(unittest.TestCase):
 
     def test_codex_adapter_uses_workspace_write_noninteractive_exec(self):
         with patch("handouter.agents.codex.availability", return_value=AgentAvailability("codex", True, "/fake/codex", "cli")):
-            command = codex.build_command(self.workspace, model="model-x")
+            command = codex.build_command(self.workspace, model="model-x", platform_name="darwin")
+            windows = codex.build_command(self.workspace, platform_name="win32")
         self.assertEqual(command[:2], ["/fake/codex", "exec"])
         self.assertIn("workspace-write", command)
+        self.assertNotIn("--dangerously-bypass-approvals-and-sandbox", command)
+        # Native Windows Codex silently downgrades workspace-write to read-only.
+        self.assertIn("--dangerously-bypass-approvals-and-sandbox", windows)
+        self.assertNotIn("workspace-write", windows)
         self.assertIn(str(self.workspace.resolve()), command)
         self.assertIn("model-x", command)
         self.assertEqual(command[-1], "-")
@@ -392,6 +397,79 @@ class AgentInteractionTests(unittest.TestCase):
             result = run_cli_agent(self.workspace, agent="codex")
         self.assertFalse(result.validation_ok)
         self.assertTrue(any("不存在" in error for error in result.validation_errors))
+
+
+class AgentFailureDiagnosisTests(unittest.TestCase):
+    def test_known_failures_get_fixed_hints(self):
+        from handouter.agents.diagnosis import diagnose, hint_from_errors
+        login = diagnose("claude", 1, "...\nNot logged in · Please run /login\n")
+        self.assertIn("/login", login)
+        quota = diagnose("claude", 1, "You've hit your 5-hour limit · resets 12:10pm (Asia/Shanghai)\n")
+        self.assertIn("额度已用完", quota)
+        self.assertIn("12:10pm", quota)
+        self.assertIn("--agent codex", quota)
+        self.assertIn("codex login", diagnose("codex", 1, "error: Not logged in. Run `codex login`"))
+        self.assertIn("网络", diagnose("codex", 1, "stream disconnected before completion"))
+        self.assertIsNone(diagnose("claude", 0, "Not logged in"))
+        self.assertIsNone(diagnose("claude", 1, "some unrelated crash"))
+        self.assertEqual(hint_from_errors(["x", "claude exited with code 1：" + login]), login)
+        self.assertIsNone(hint_from_errors(["claude exited with code 1"]))
+
+    def test_forwarding_streams_output_and_keeps_tail(self):
+        from handouter.agents.diagnosis import run_forwarding
+        script = "import sys; data = sys.stdin.read(); print('got', len(data)); print('Not logged in', file=sys.stderr); sys.exit(3)"
+        stderr = io.StringIO()
+        with tempfile.TemporaryDirectory() as cwd, contextlib.redirect_stderr(stderr):
+            code, tail = run_forwarding([sys.executable, "-c", script], input_text="x" * 200000, cwd=cwd)
+        self.assertEqual(code, 3)
+        self.assertIn("got 200000", tail)
+        self.assertIn("Not logged in", tail)
+        self.assertIn("Not logged in", stderr.getvalue())
+
+    def test_runner_reports_login_hint_in_result(self):
+        from handouter.agents.diagnosis import LOGIN_HINTS
+        with patch("handouter.agents.runner.run_forwarding", return_value=(1, "Not logged in · Please run /login")):
+            temp = tempfile.TemporaryDirectory()
+            self.addCleanup(temp.cleanup)
+            root = Path(temp.name)
+            transcript = root / "t.txt"
+            transcript.write_text("课程内容。", encoding="utf-8")
+            workspace = prepare_lecture(root / "out", lecture_id="L1", course_title="Course",
+                                        transcript=transcript).workspace
+            with patch("handouter.agents.claude.availability", return_value=AgentAvailability("claude", True, "/fake/claude", "cli")), \
+                 patch("handouter.agents.claude.build_command", return_value=["/fake/claude", "--print"]):
+                result = run_cli_agent(workspace, agent="claude")
+        self.assertFalse(result.validation_ok)
+        self.assertEqual(result.failure_hint, LOGIN_HINTS["claude"])
+        self.assertTrue(any(LOGIN_HINTS["claude"] in error for error in result.validation_errors))
+
+    def test_logged_out_agent_fails_before_work(self):
+        from handouter import doctor
+        with patch("handouter.doctor.shutil.which", return_value="/fake/claude"), \
+             patch("handouter.agents.diagnosis.login_status", return_value="logged_out"):
+            with self.assertRaises(RuntimeError) as raised:
+                doctor.require_features(["core"], agent="claude")
+        self.assertIn("/login", str(raised.exception))
+        self.assertIn("未开始", str(raised.exception))
+
+    def test_login_status_parsing(self):
+        from handouter.agents import diagnosis
+        cases = [("claude", '{"loggedIn": false}', 1, "logged_out"),
+                 ("claude", '{"loggedIn": true}', 0, "logged_in"),
+                 ("codex", "Logged in using ChatGPT", 0, "logged_in"),
+                 ("codex", "Not logged in", 1, "logged_out"),
+                 ("codex", "error: unknown command", 2, "unknown")]
+        def fake_run(out, code):
+            # login_status sends output to files (not pipes), so write into them.
+            def run(command, *, stdout, stderr, **_kwargs):
+                stdout.write(out.encode("utf-8"))
+                return SimpleNamespace(returncode=code)
+            return run
+        for agent, out, code, expected in cases:
+            with patch("handouter.agents.diagnosis.subprocess.run", side_effect=fake_run(out, code)):
+                self.assertEqual(diagnosis.login_status(agent, "/fake/" + agent), expected, (agent, out))
+        with patch("handouter.agents.diagnosis.subprocess.run", side_effect=OSError("boom")):
+            self.assertEqual(diagnosis.login_status("claude", "/fake/claude"), "unknown")
 
 
 if __name__ == "__main__":

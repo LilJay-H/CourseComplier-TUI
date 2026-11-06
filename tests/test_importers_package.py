@@ -54,7 +54,7 @@ class PackageImporterTests(unittest.TestCase):
         self.assertEqual(mapping[0]["time_status"], "unknown_numeric_unit")
         self.assertEqual(mapping[0]["raw_time_value"], 11400)
         self.assertFalse((out / "private").exists())
-        text = (out / "slides_meta.json").read_text()
+        text = (out / "slides_meta.json").read_text(encoding="utf-8")
         self.assertNotIn("SECRET", text)
 
     def test_build_asset_passes_only_checked_standard_package_to_local_pipeline(self):
@@ -94,7 +94,7 @@ class PackageImporterTests(unittest.TestCase):
         self.assertEqual(result.materials.slide_image_count, 1)
         self.assertEqual(result.materials.slide_unknown_time_count, 1)
         self.assertFalse(any(path.name.startswith(".a-01.slides-") for path in (self.root / "workspace").iterdir()))
-        prompt = (result.workspace / "handoff" / "PROMPT.md").read_text()
+        prompt = (result.workspace / "handoff" / "PROMPT.md").read_text(encoding="utf-8")
         self.assertNotIn("SECRET", prompt)
 
 

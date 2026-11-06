@@ -2,6 +2,13 @@
 
 2026-10-25：TUI 已抽取为独立本地 Git 仓库，可安装、启动和继续开发。GUI、Server、云客户端/协议和 GUI runtime 未进入本仓库；本地 Workflow 规则、用户 Agent 适配器和材料链路保留。来源记录见 NOTICE.md / provenance.json，归属清单见 docs/SPLIT_SCOPE.md。
 
+## Windows 真实课程实测与修复（2026-11-01 至 11-06，分支 fix/windows-round1）
+
+- Windows 11 / CPython 3.14：真实 SenseVoiceSmall + FSMN-VAD（CPU）、真实 Codex 与 Claude CLI、智云插件本机构建版，跑通 8 节真实课程（CLI 7 节、交互 TUI 1 节）的 ZIP → 下载 → ASR → Agent → 校验 → 离线 HTML。讲义语义质量未评审。
+- 第一轮修复：Codex 在 Windows 上 workspace-write 静默变只读（改用 bypass 参数）；Agent 登录预检与失败原因提示；CLI 相对路径；ASR 内存不足提示；CRLF 讲义；TUI 中文界面、PDCurses 宽字符显示、粘贴/拖入、目录对话框；测试套件在中文 Windows 上全绿。
+- 第二轮修复：Agent 阶段每 30 秒显示已用时间；插件 `progress_bytes` 字节进度（可选能力，旧插件不受影响）；同一浏览器 ZIP 的音频已缓存时跳过视频下载；启动采集时清理被强杀遗留的临时目录；缓存音频硬链接进工作区；TUI 的 W 支持拖入原始 ZIP、错误提示中文化、只预填真实讲次、空资料框单按 W 即打开讲次；输出目录拒绝相对路径；尚未运行的讲次显示实际将创建的位置；已有讲次加模式时可保留已完成的讲义。
+- 第二轮改动只有合成测试；交互 TUI 和真实下载未在第二轮人工复测。详见测试根目录的 TEST_LOG.md / ISSUES.md / TUI_ITERATION_REPORT.md。
+
 ## 本次外部采集器迁移（2026-10-25）
 
 - 已将原仓 `0a21e87` 的通用外部采集宿主同步到协作分支 `codex/external-collector-sync`；已经 PR #1 合并到 `main`（`5280a2c`）。
@@ -26,8 +33,7 @@
 
 ## 限制与未验证
 
-- TUI 保留原 FunASR/Torch SenseVoiceSmall + FSMN-VAD 路线；未安装或运行真实 ASR 原生依赖/模型，未宣称语音识别准确率。完整 setup 的真实模型准备阶段未运行。
-- 未调用真实 Codex/Claude 模型，登录、额度、CLI 上游兼容性及讲义语义质量待真实使用验证。没有团队云依赖。
-- Linux、其他 Python 版本、真实课程平台 CDN/签名链接未实测。历史 Windows 环境无法创建 symlink；本次 macOS 合成测试的权限边界与其不同。
+- TUI 沿用 FunASR/Torch SenseVoiceSmall + FSMN-VAD。真实模型与真实 Codex/Claude CLI 已在 Windows 上跑通（见文首 2026-11 一节）；语音识别准确率与讲义语义质量没有评审。没有团队云依赖。
+- Linux、macOS 真实课程链路未实测。历史 Windows 环境无法创建 symlink；本次 macOS 合成测试的权限边界与其不同。
 - 本次 wheel/sdist 和 Windows 源码启动 ZIP 不附带 FFmpeg、模型或完整离线依赖。媒体测试复用了机器现有 FFmpeg/ffprobe；其他机器需按 README 准备。
 - 独立 TUI 已托管于 `LilJay-H/CourseComplier-TUI`，仓库已公开（2026-10-30 核对）；协作者有 WRITE 权限。尚未新增许可证，公开授权和许可证仍需另行决定。

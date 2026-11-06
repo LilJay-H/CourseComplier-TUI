@@ -22,7 +22,7 @@ class DeliveryCopyTests(unittest.TestCase):
         self.organization = {'version': 2, 'lecture_id': 'lecture-id', 'course_title': '课程',
             'lecture_date': None, 'base_name': base, 'name_prefix': '课程_授课日期待确认'}
         self.write_json('manifest.json', {'lecture_id': 'lecture-id', 'output_organization': self.organization})
-        (self.collection / '.handouter-collection.json').write_text(json.dumps(self.organization))
+        (self.collection / '.handouter-collection.json').write_text(json.dumps(self.organization), encoding="utf-8")
         self.write_json('state.json', {})
         self.write_json('handoff/sources.json', {'mode': 'deep', 'expected_outputs': {'deep': 'notes/课程-deep-001.md'},
             'options': {'use_slides_as_source': True, 'embed_slides': True}})
@@ -48,11 +48,11 @@ class DeliveryCopyTests(unittest.TestCase):
     def test_existing_different_bytes_never_overwritten(self):
         publish_deliverables(self.workspace)
         target = self.collection / '成果/notes' / self.note.name
-        target.write_text('User edit')
+        target.write_text('User edit', encoding="utf-8")
         result = publish_deliverables(self.workspace)
         self.assertEqual(result['status'], 'failed')
-        self.assertEqual(target.read_text(), 'User edit')
-        self.assertTrue(self.note.read_text().startswith('# 合成'))
+        self.assertEqual(target.read_text(encoding="utf-8"), 'User edit')
+        self.assertTrue(self.note.read_text(encoding="utf-8").startswith('# 合成'))
 
     def test_symlink_destination_and_source_are_rejected(self):
         outside = self.base / 'outside'
@@ -89,7 +89,7 @@ class DeliveryCopyTests(unittest.TestCase):
         self.assertFalse((self.collection / '成果').exists())
 
     def test_remote_image_cannot_claim_offline_delivery(self):
-        self.note.write_text('# Synthetic\n![remote](https://example.org/image.png)')
+        self.note.write_text('# Synthetic\n![remote](https://example.org/image.png)', encoding="utf-8")
         self.write_json('handoff/sources.json', {'mode': 'deep', 'expected_outputs': {'deep': 'notes/课程-deep-001.md'},
             'options': {'allow_web': True}})
         result = publish_deliverables(self.workspace)
@@ -99,11 +99,11 @@ class DeliveryCopyTests(unittest.TestCase):
     def test_collection_binding_and_note_local_images(self):
         local = self.workspace / 'notes/local.png'
         local.write_bytes(b'local synthetic')
-        self.note.write_text('# Synthetic\n![local](local.png)')
+        self.note.write_text('# Synthetic\n![local](local.png)', encoding="utf-8")
         result = publish_deliverables(self.workspace)
         self.assertEqual(result['status'], 'ready', result)
         self.assertEqual((self.collection / '成果/notes/local.png').read_bytes(), local.read_bytes())
-        (self.collection / '.handouter-collection.json').write_text(json.dumps({'version': 2, 'lecture_id': 'other', 'name_prefix': '课程_授课日期待确认'}))
+        (self.collection / '.handouter-collection.json').write_text(json.dumps({'version': 2, 'lecture_id': 'other', 'name_prefix': '课程_授课日期待确认'}), encoding="utf-8")
         self.assertEqual(publish_deliverables(self.workspace)['status'], 'failed')
 
     def test_missing_modes_are_pending_without_copy_errors(self):
@@ -121,7 +121,7 @@ class DeliveryCopyTests(unittest.TestCase):
         self.assertEqual(len(result['pending']), 2)
 
     def test_existing_invalid_note_is_not_pending(self):
-        self.note.write_text('')
+        self.note.write_text('', encoding="utf-8")
         result = publish_deliverables(self.workspace)
         self.assertEqual(result['status'], 'failed')
         self.assertTrue(result['errors'])
@@ -131,7 +131,7 @@ class DeliveryCopyTests(unittest.TestCase):
         marker = dict(self.organization)
         marker.pop('course_title')
         marker.pop('base_name')
-        (self.collection / '.handouter-collection.json').write_text(json.dumps(marker))
+        (self.collection / '.handouter-collection.json').write_text(json.dumps(marker), encoding="utf-8")
         result = publish_deliverables(self.workspace)
         self.assertEqual(result['status'], 'failed', result)
         self.assertEqual(result['outputs'], {})

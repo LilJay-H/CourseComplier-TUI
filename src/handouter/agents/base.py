@@ -25,6 +25,7 @@ class AgentRunResult:
     outputs: dict[str, str]
     validation_ok: bool
     validation_errors: tuple[str, ...]
+    failure_hint: str | None = None
 
 
 def read_handoff(workspace: str | Path) -> tuple[Path, dict[str, Any], str]:

@@ -47,16 +47,16 @@ class SetupTests(unittest.TestCase):
             root = Path(td)
             # Exercise only the real discovery function. Never execute the
             # bootstrap's package-manager fallback, including on regressions.
-            discovery = (setup.ROOT / 'setup-handouter.command').read_text().split('\nrefresh_brew_path()', 1)[0]
+            discovery = (setup.ROOT / 'setup-course-compiler.command').read_text(encoding="utf-8").split('\nrefresh_brew_path()', 1)[0]
             script = root / 'discover.command'
-            script.write_text(discovery + '\nfind_python\n')
+            script.write_text(discovery + '\nfind_python\n', encoding="utf-8")
             binaries = root / 'bin'
             binaries.mkdir()
             (binaries / 'python3.14').symlink_to(sys.executable)
             # The default Python is deliberately unavailable.
             for name in ('python3', 'brew', 'curl'):
                 blocked = binaries / name
-                blocked.write_text('#!/bin/sh\nexit 91\n')
+                blocked.write_text('#!/bin/sh\nexit 91\n', encoding="utf-8")
                 blocked.chmod(0o755)
             result = subprocess.run(['/bin/bash', str(script)],
                 env={**os.environ, 'PATH': str(binaries) + ':/usr/bin:/bin'},

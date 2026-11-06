@@ -51,7 +51,7 @@ class SplitDistributionTests(unittest.TestCase):
                 self.assertNotIn('Provides-Extra: client', metadata)
             with tarfile.open(Path(temporary) / build.build_sdist(temporary)) as sdist:
                 names = [n.split('/', 1)[1] for n in sdist.getnames()]
-                self.assertEqual(set(names), set(json.loads((ROOT / 'release-files.json').read_text())))
+                self.assertEqual(set(names), set(json.loads((ROOT / 'release-files.json').read_text(encoding="utf-8"))))
                 self.assertFalse(any(n.startswith(('apps/', 'deploy/', '.git/', 'build/', 'scratch/')) for n in names))
                 self.assertIn('provenance.json', names)
                 self.assertIn('tests/test_split_distribution.py', names)

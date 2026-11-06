@@ -163,7 +163,7 @@ class SlideZipImportTests(unittest.TestCase):
             "url": "https://example.invalid/image?auth_key=SECRET", "cookie": "SECRET",
         }], extra={"course_info.json": '{"videoUrl":"SECRET"}'})
         self.run_import()
-        text = (self.output / "slides_meta.json").read_text()
+        text = (self.output / "slides_meta.json").read_text(encoding="utf-8")
         self.assertNotIn("SECRET", text)
         self.assertFalse((self.output / "course_info.json").exists())
 
@@ -171,10 +171,10 @@ class SlideZipImportTests(unittest.TestCase):
         self.make_zip(None)
         self.output.mkdir()
         sentinel = self.output / "user.txt"
-        sentinel.write_text("keep")
+        sentinel.write_text("keep", encoding="utf-8")
         with self.assertRaises(FileExistsError):
             self.run_import()
-        self.assertEqual(sentinel.read_text(), "keep")
+        self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
 
     def test_existing_empty_output_is_also_rejected(self):
         self.make_zip(None)
@@ -265,12 +265,12 @@ class SlideZipImportTests(unittest.TestCase):
     def test_manifest_write_failure_removes_only_new_output(self):
         self.make_zip(None)
         unrelated = self.root / "keep.txt"
-        unrelated.write_text("keep")
+        unrelated.write_text("keep", encoding="utf-8")
         with patch.object(slide_importers.json, "dump", side_effect=OSError("simulated disk failure")):
             with self.assertRaises(OSError):
                 self.run_import()
         self.assertFalse(self.output.exists())
-        self.assertEqual(unrelated.read_text(), "keep")
+        self.assertEqual(unrelated.read_text(encoding="utf-8"), "keep")
 
     def test_archive_member_count_is_bounded(self):
         self.make_zip(None, {"first.png": PNG, "second.png": PNG})

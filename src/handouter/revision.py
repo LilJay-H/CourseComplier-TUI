@@ -18,7 +18,10 @@ def read_revision_note(path: str | Path, *, action: str = "derive", note_only: b
     raw = read_bytes(source.parent, source.name)
     if len(raw) > 2 * 1024 * 1024:
         raise ValueError("已有讲义超过 2 MiB，请先拆分为单课讲义")
-    text = raw.decode("utf-8-sig")
+    # Normalize CRLF/CR so later text-mode writes on Windows do not turn
+    # "\r\n" into "\r\r\n" (read back as doubled blank lines). The hash still
+    # covers the original bytes.
+    text = raw.decode("utf-8-sig").replace("\r\n", "\n").replace("\r", "\n")
     if not text.strip() or "\x00" in text:
         raise ValueError("已有讲义为空或不是有效文本")
     credentials = scan_credentials(text)

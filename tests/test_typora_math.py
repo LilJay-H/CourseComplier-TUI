@@ -116,14 +116,14 @@ class TyporaMathTests(unittest.TestCase):
             second = export_typora(note, repair_escapes=True)
             self.assertNotEqual(first, second)
             self.assertEqual(first.read_bytes(), second.read_bytes())
-            self.assertIn(r'$x \times y$', first.read_text())
-            self.assertNotIn('<details', first.read_text())
+            self.assertIn(r'$x \times y$', first.read_text(encoding="utf-8"))
+            self.assertNotIn('<details', first.read_text(encoding="utf-8"))
             self.assertEqual(note.read_bytes(), original.encode())
 
     def test_unknown_damage_still_refuses_after_opt_in(self):
         with tempfile.TemporaryDirectory() as td:
             note = Path(td) / 'note.md'
-            note.write_text('$x\x01y$')
+            note.write_text('$x\x01y$', encoding="utf-8")
             with self.assertRaises(ValueError):
                 export_typora(note, repair_escapes=True)
             self.assertEqual(list(Path(td).glob('*.typora*.md')), [])
@@ -136,7 +136,7 @@ class TyporaMathTests(unittest.TestCase):
                         '`$x \times y$`')
             source = '<details><summary>示例</summary><p>$x \times y$</p>\n' + examples + '\n</details>'
             note.write_bytes(source.encode())
-            result = export_typora(note, repair_escapes=True).read_text()
+            result = export_typora(note, repair_escapes=True).read_text(encoding="utf-8")
             self.assertIn(examples, result)
             self.assertIn(r'$x \times y$', result)
             self.assertEqual(note.read_bytes(), source.encode())

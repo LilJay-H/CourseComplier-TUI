@@ -76,7 +76,7 @@ def inspect_input_source(source: str | Path, *, source_kind: str | None = None) 
     if not path.is_file():
         raise FileNotFoundError(f"输入不存在或不是普通文件: {path}")
     from .importers import (LOCAL_ASSET_MANIFEST, LOCAL_AUDIO_SUFFIXES, LOCAL_MEDIA_SUFFIXES,
-                            LOCAL_TRANSCRIPT_SUFFIXES, inspect_local_asset_zip)
+                            LOCAL_TRANSCRIPT_SUFFIXES)
     suffix = path.suffix.lower()
     kind = source_kind
     if kind is None and suffix == ".zip":
@@ -91,7 +91,8 @@ def inspect_input_source(source: str | Path, *, source_kind: str | None = None) 
     if kind == "zhiyun_asset_zip":
         return inspect_asset_zip(path)
     if kind == "local_asset_package":
-        metadata = inspect_local_asset_zip(path)
+        from handouter_local.assets import peek
+        metadata = peek(path)
         from .stage_cache import asset_fingerprint
         fingerprint = asset_fingerprint(path)
         return AssetIdentity(metadata["course_title"], metadata["lecture_id"] or "local-" + fingerprint[:12],
@@ -108,16 +109,46 @@ def inspect_input_source(source: str | Path, *, source_kind: str | None = None) 
     return AssetIdentity(path.stem.strip() or None, "local-" + fingerprint[:12], None, kind, False)
 
 
-def resolve_input_source(input_dir: str | Path, source: str | Path, *, source_kind: str | None = None) -> Path:
+def _relative_input(input_dir: str | Path | None, candidate: Path, *, cwd_first: bool | str) -> Path:
+    """Resolve a relative input path.
+
+    Command-line users expect paths relative to the current directory, while
+    the TUI asks for a file name inside the configured input directory. With
+    ``cwd_first`` an existing file under the current directory wins; otherwise
+    the input directory is used, and a missing input directory is only an
+    error when the file was not found elsewhere.
+    """
+    local = Path.cwd() / candidate
+    if cwd_first == 'fallback':
+        # An explicit --input-dir is searched first; the current directory is
+        # only a fallback, so a same-named file in cwd never silently wins.
+        directory = Path(input_dir if input_dir is not None else ".").expanduser().resolve()
+        inside = directory / candidate
+        if inside.is_file() or inside.is_symlink() or not (local.is_file() or local.is_symlink()):
+            if not directory.is_dir():
+                raise NotADirectoryError(f"输入目录不存在或不是目录: {directory}")
+            return inside
+        return local
+    if cwd_first:
+        if local.is_file() or local.is_symlink():
+            return local
+    directory = Path(input_dir if input_dir is not None else ".").expanduser().resolve()
+    if not directory.is_dir():
+        if cwd_first:
+            raise FileNotFoundError(f"输入不存在或不是普通文件: {(Path.cwd() / candidate).resolve()}"
+                                    f"（相对路径按当前目录解析；输入目录 {directory} 也不存在）")
+        raise NotADirectoryError(f"输入目录不存在或不是目录: {directory}")
+    return directory / candidate
+
+
+def resolve_input_source(input_dir: str | Path, source: str | Path, *, source_kind: str | None = None,
+                         cwd_first: bool | str = False) -> Path:
     normalized = normalize_terminal_path(source)
     candidate = Path(normalized)
     if candidate.is_absolute():
         unresolved = candidate
     else:
-        directory = Path(input_dir).expanduser().resolve()
-        if not directory.is_dir():
-            raise NotADirectoryError(f"输入目录不存在或不是目录: {directory}")
-        unresolved = directory / candidate
+        unresolved = _relative_input(input_dir, candidate, cwd_first=cwd_first)
     if unresolved.is_symlink():
         raise FileNotFoundError(f"输入不存在或不是普通文件: {unresolved}")
     candidate = unresolved.resolve()
@@ -186,17 +217,15 @@ def discover_asset_zips(input_dir: str | Path) -> list[Path]:
     )
 
 
-def resolve_asset_zip(input_dir: str | Path = ".", asset: str | Path | None = None) -> Path:
+def resolve_asset_zip(input_dir: str | Path = ".", asset: str | Path | None = None, *,
+                      cwd_first: bool = False) -> Path:
     if asset is not None and str(asset).strip():
         normalized = normalize_terminal_path(asset)
         candidate = Path(normalized)
         if candidate.is_absolute():
             candidate = candidate.resolve()
         else:
-            directory = Path(input_dir).expanduser().resolve()
-            if not directory.is_dir():
-                raise NotADirectoryError(f"输入目录不存在或不是目录: {directory}")
-            candidate = (directory / candidate).resolve()
+            candidate = _relative_input(input_dir, candidate, cwd_first=cwd_first).resolve()
         if not candidate.is_file() or candidate.suffix.lower() != ".zip":
             raise FileNotFoundError(f"找不到资产 ZIP: {candidate}")
         return candidate

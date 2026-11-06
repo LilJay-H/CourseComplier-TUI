@@ -390,7 +390,10 @@ def _apply_agent_interaction(
         }, 0
     result = run_cli_agent(workspace, agent=mode, model=agent_model)
     if not result.validation_ok:
-        print('course-compiler: error: Agent 阶段未完整通过；已发布的合格成果保留。使用 task-status 查看缺失项，再 continue 续作。', file=sys.stderr)
+        from .agents.diagnosis import hint_from_errors
+        hint = result.failure_hint or hint_from_errors(result.validation_errors)
+        print('course-compiler: error: Agent 阶段未完整通过；已发布的合格成果保留。'
+              + (f'原因：{hint}。' if hint else '使用 task-status 查看缺失项，再 continue 续作。'), file=sys.stderr)
     from .tasks import retry_html
     html_delivery = retry_html(workspace, requested_only=True) if result.validation_ok and result.returncode == 0 else {
         'status': 'skipped', 'outputs': {}, 'errors': []}
@@ -418,7 +421,8 @@ def _run_product(args: argparse.Namespace) -> int:
     if requested:
         source_kind, raw_source = requested[0]
         kind_map = {"audio": "local_audio", "media": "local_media", "transcript": "local_transcript"}
-        source = resolve_input_source(args.input_dir, raw_source, source_kind=kind_map.get(source_kind))
+        source = resolve_input_source(args.input_dir, raw_source, source_kind=kind_map.get(source_kind),
+                                      cwd_first='fallback' if getattr(args, 'input_dir_explicit', False) else True)
         identity = inspect_input_source(source, source_kind=kind_map.get(source_kind))
     else:
         source = resolve_asset_zip(args.input_dir, None)
@@ -760,6 +764,7 @@ def _refresh_prompt(args: argparse.Namespace) -> int:
 
 
 def _agents_status(_args: argparse.Namespace) -> int:
+    from .agents.diagnosis import login_status
     payload = {
         "manual": {"available": True, "mode": "gui_bundle"},
         "web": {"available": True, "mode": "web_chat"},
@@ -769,6 +774,7 @@ def _agents_status(_args: argparse.Namespace) -> int:
                 "available": item.available,
                 "executable": item.executable,
                 "mode": item.mode,
+                "login": login_status(item.name, item.executable) if item.available else "unknown",
             }
             for item in available_cli_agents()
         ],
@@ -961,6 +967,10 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return 0
         settings = None
+        if hasattr(args, 'input_dir'):
+            # An explicit --input-dir is where relative inputs live; only the
+            # saved/desktop default yields to the current directory.
+            args.input_dir_explicit = getattr(args, 'input_dir') is not None
         if hasattr(args, 'input_dir') and getattr(args, 'input_dir') is None:
             settings = load_directory_settings()
             args.input_dir = settings['input_dir']

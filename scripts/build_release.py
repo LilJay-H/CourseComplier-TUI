@@ -277,7 +277,7 @@ def build_bundle(
                 for relative, data in sorted(files.items()):
                     executable = (
                         platform == "macos"
-                        and relative in {"setup-handouter.command", "start-handouter.command", "setup-course-compiler.command", "start-course-compiler.command", "runtime/ffmpeg/ffmpeg", "runtime/ffmpeg/ffprobe"}
+                        and relative in {"setup-course-compiler.command", "start-course-compiler.command", "runtime/ffmpeg/ffmpeg", "runtime/ffmpeg/ffprobe"}
                     )
                     archive.writestr(_zip_info(f"{root_name}/{relative}", executable=executable), data)
             with zipfile.ZipFile(staging, "r") as archive:

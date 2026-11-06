@@ -136,9 +136,18 @@ def run_doctor(*, features=None, agent: str | None = None, native_asr: bool = Fa
             raise ValueError('Unknown Agent')
         executable = shutil.which(agent) if agent in {'codex', 'claude'} else None
         available = bool(executable) or agent in {'manual', 'web', 'none'}
-        agent_report.update(available=available, executable=executable,
-                            detail='executable presence only; login and model generation not verified')
-        checks.append(Check(agent, available, agent_report['detail'], 'agent'))
+        login = 'not_applicable'
+        if executable:
+            from .agents.diagnosis import login_status
+            login = login_status(agent, executable)
+        logged_out = login == 'logged_out'
+        agent_report.update(available=available, executable=executable, login=login,
+                            login_verified=login == 'logged_in',
+                            detail=('CLI 未登录' if logged_out else
+                                    'executable found; login ' + ('verified' if login == 'logged_in' else 'not verified')
+                                    + '; model generation not verified') if executable else
+                                   ('not found on PATH' if agent in {'codex', 'claude'} else 'built-in'))
+        checks.append(Check(agent, available and not logged_out, agent_report['detail'], 'agent'))
     ok_core = all(check.ok for check in checks if check.required_for == "core")
     report = {
         "platform": platform.system(),
@@ -160,6 +169,11 @@ def require_features(features, *, native_asr: bool = False, agent: str | None = 
     """Fail before expensive work; only inspect explicitly requested capabilities."""
     report = run_doctor(features=features, native_asr=native_asr, agent=agent)
     failed = [f"{item['required_for']}/{item['name']}" for item in report['checks'] if not item['ok']]
+    agent_info = report.get('agent') or {}
+    if agent_info.get('login') == 'logged_out':
+        from .agents.diagnosis import LOGIN_HINTS
+        raise RuntimeError(LOGIN_HINTS.get(agent, f'{agent} CLI 未登录').replace('，再用 continue 续作', '后重试')
+                           + '；本次未开始任何处理')
     if failed:
         raise RuntimeError('运行依赖未满足: ' + ', '.join(failed) + '；请安装相应依赖后重试')
     return report

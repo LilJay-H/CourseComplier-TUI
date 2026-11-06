@@ -27,10 +27,10 @@ class OrganizationTests(unittest.TestCase):
         self.assertEqual(result.workspace.parent.parent.name, '课程 _ A-09-10')
         self.assertTrue((result.workspace.parent.parent / '成果').is_dir())
         self.assertTrue((result.workspace.parent.parent / '中间产物_可清理').is_dir())
-        self.assertEqual(json.loads((result.workspace / 'manifest.json').read_text())['lecture_id'], 'one')
+        self.assertEqual(json.loads((result.workspace / 'manifest.json').read_text(encoding="utf-8"))['lecture_id'], 'one')
         output = result.handoff.output_path
         self.assertEqual(output, 'notes/课程 _ A_2026-09-10_deep-001.md')
-        (result.workspace / output).write_text('# 保留\n')
+        (result.workspace / output).write_text('# 保留\n', encoding="utf-8")
         refreshed = refresh_handoff(result.workspace)
         self.assertTrue(refreshed.handoff.output_path.endswith('_deep-002.md'))
 
@@ -65,7 +65,7 @@ class OrganizationTests(unittest.TestCase):
         marker = {'version': 1, 'lecture_id': 'legacy-id', 'course_title': '旧课程',
                   'lecture_date': '2026-09-10', 'base_name': '旧课程_2026-09-10',
                   'name_prefix': '旧课程_2026-09-10'}
-        (package / '.handouter-collection.json').write_text(json.dumps(marker, ensure_ascii=False))
+        (package / '.handouter-collection.json').write_text(json.dumps(marker, ensure_ascii=False), encoding="utf-8")
         self.assertEqual(resolve_workspace(package), workspace.resolve())
 
     def test_auto_folder_name_omits_course_when_root_is_course_or_alias(self):
@@ -85,15 +85,18 @@ class OrganizationTests(unittest.TestCase):
                                       aliases=['计组'], folder_name_mode='never'), ('09-17', 'date_only'))
 
     def test_export_date_is_not_lecture_date(self):
-        import zipfile
+        # Reading course_info.json belongs to the external collector plugin; the
+        # core must only pass its lecture_date through and never guess one.
+        # Patch the bridge so the test never calls a plugin installed on the host.
         from handouter.product import inspect_asset_zip
         asset = self.root / 'asset.zip'
-        with zipfile.ZipFile(asset, 'w') as archive:
-            archive.writestr('course_info.json', json.dumps({'courseName': '课', 'exportDate': '2026-09-17'}))
-        self.assertIsNone(inspect_asset_zip(asset).lecture_date)
-        with zipfile.ZipFile(asset, 'w') as archive:
-            archive.writestr('course_info.json', json.dumps({'courseName': '课', 'lectureDate': '2026-09-10'}))
-        self.assertEqual(inspect_asset_zip(asset).lecture_date, '2026-09-10')
+        asset.write_bytes(b'synthetic')
+        def inspected(lecture_date):
+            return {'course_title': '课', 'source_id': None, 'source_sha256': 'a' * 64, 'lecture_date': lecture_date}
+        with patch('handouter.external_collector.inspect_browser_export', return_value=inspected(None)):
+            self.assertIsNone(inspect_asset_zip(asset).lecture_date)
+        with patch('handouter.external_collector.inspect_browser_export', return_value=inspected('2026-09-10')):
+            self.assertEqual(inspect_asset_zip(asset).lecture_date, '2026-09-10')
 
     def test_failed_empty_package_does_not_block_corrected_date(self):
         with patch('handouter.service.create_workspace', side_effect=ValueError('synthetic invalid input')):
@@ -167,7 +170,7 @@ class OrganizationTests(unittest.TestCase):
         shutil.rmtree(package)
         exported = export_html(moved)
         self.assertTrue(exported)
-        self.assertIn('data:image/png', exported[0].read_text())
+        self.assertIn('data:image/png', exported[0].read_text(encoding="utf-8"))
 
     def test_collision_normalization_and_linked_destination_refuse_overwrite(self):
         from handouter.organization import course_name
@@ -178,8 +181,13 @@ class OrganizationTests(unittest.TestCase):
         outside = self.root / 'outside'
         outside.mkdir()
         (package / '成果').rmdir()
-        (package / '成果').symlink_to(outside, target_is_directory=True)
-        (first.workspace / first.handoff.output_path).write_text('# 合成稿\n')
+        try:
+            (package / '成果').symlink_to(outside, target_is_directory=True)
+        except OSError as exc:
+            if getattr(exc, 'winerror', None) == 1314:
+                self.skipTest('symlinks unavailable')
+            raise
+        (first.workspace / first.handoff.output_path).write_text('# 合成稿\n', encoding="utf-8")
         from handouter.delivery import publish_deliverables
         self.assertEqual(publish_deliverables(first.workspace)['status'], 'failed')
         self.assertEqual(list(outside.iterdir()), [])
@@ -219,8 +227,8 @@ class OrganizationTests(unittest.TestCase):
         def transcribe(source, output, **kwargs):
             output = Path(output)
             output.mkdir()
-            (output / 'raw.json').write_text('{}')
-            (output / 'segments.json').write_text('[]')
+            (output / 'raw.json').write_text('{}', encoding="utf-8")
+            (output / 'segments.json').write_text('[]', encoding="utf-8")
             (output / 'transcript.txt').write_text('Synthetic 中文课程。', encoding='utf-8')
             return ASRResult(output, output / 'raw.json', output / 'segments.json', output / 'transcript.txt', 0, 'unavailable', 'cpu', 0.1)
         with patch('handouter.doctor.require_features'), patch('handouter.service.extract_audio', side_effect=extract), \
@@ -240,9 +248,9 @@ class OrganizationTests(unittest.TestCase):
         from handouter.agents.runner import _formal_inventory
         result = self.prepare()
         historical = result.workspace.parent.parent / '成果/old.html'
-        historical.write_text('old result')
+        historical.write_text('old result', encoding="utf-8")
         before = _formal_inventory(result.workspace)
-        historical.write_text('external change')
+        historical.write_text('external change', encoding="utf-8")
         self.assertNotEqual(before, _formal_inventory(result.workspace))
 
     def test_tui_results_find_course_named_upload_directories(self):

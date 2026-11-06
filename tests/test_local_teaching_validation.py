@@ -14,10 +14,10 @@ class LocalTeachingValidationTests(unittest.TestCase):
             root = Path(tmp).resolve()
             (root / 'notes').mkdir()
             (root / 'handoff').mkdir()
-            (root / 'state.json').write_text('{}')
+            (root / 'state.json').write_text('{}', encoding="utf-8")
             sources = {'mode': 'deep', 'expected_output': 'notes/deep-001.md',
                        'options': {'format_profile': 'clean', 'use_slides_as_source': False, 'embed_slides': False}}
-            (root / 'handoff/sources.json').write_text(json.dumps(sources))
+            (root / 'handoff/sources.json').write_text(json.dumps(sources), encoding="utf-8")
             note = root / 'notes/deep-001.md'
             body = '# 合成例子\n\n$$25+2\\times35+15=145$$\n'
             note.write_text(body, encoding='utf-8')

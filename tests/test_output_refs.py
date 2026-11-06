@@ -74,6 +74,6 @@ class OutputRefTests(unittest.TestCase):
             self.assertEqual(resolved.text, result[slice(*manifest['objects'][0]['output_span'])])
             path = root / manifest_path(sources, manifest['output_sha256'])
             manifest['objects'][0]['output_span'][0] += 1
-            path.write_text(json.dumps(manifest))
+            path.write_text(json.dumps(manifest), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, 'COMPOSITION_MISMATCH'):
                 resolve_output_ref(result.encode(), ref, **kwargs)

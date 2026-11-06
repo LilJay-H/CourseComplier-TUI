@@ -45,6 +45,18 @@ def choose_device(requested: str = "auto") -> str:
     return "cpu"
 
 
+OUT_OF_MEMORY_HINT = (
+    "转写时内存不足（{device}）：请关闭占内存的程序（浏览器、聊天软件等）后重新运行；"
+    "已抽好的音频会复用"
+)
+_OUT_OF_MEMORY_MARKERS = ("not enough memory", "out of memory", "defaultcpuallocator", "can't allocate memory")
+
+
+def _is_out_of_memory(exc: BaseException) -> bool:
+    message = str(exc).lower()
+    return any(marker in message for marker in _OUT_OF_MEMORY_MARKERS)
+
+
 def transcribe_sensevoice(
     audio: str | Path,
     output_dir: str | Path,
@@ -146,6 +158,11 @@ def transcribe_sensevoice(
             with path.open("r+b") as written:
                 os.fsync(written.fileno())
         staging.rename(destination)
+    except (MemoryError, RuntimeError) as exc:
+        shutil.rmtree(staging, ignore_errors=True)
+        if isinstance(exc, MemoryError) or _is_out_of_memory(exc):
+            raise ASRError(OUT_OF_MEMORY_HINT.format(device=resolved_device)) from exc
+        raise
     except BaseException:
         shutil.rmtree(staging, ignore_errors=True)
         raise

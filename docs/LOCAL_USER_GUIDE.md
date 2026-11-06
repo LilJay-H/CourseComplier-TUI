@@ -198,4 +198,4 @@ handouter --help  # 兼容入口
 course-compiler doctor
 ```
 
-CLI 适合自动化和高级用户；普通用户建议直接使用 `start-handouter` 启动 TUI。
+CLI 适合自动化和高级用户；普通用户建议直接使用 `start-course-compiler` 启动 TUI。

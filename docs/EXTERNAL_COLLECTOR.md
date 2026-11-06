@@ -4,7 +4,7 @@ TXT、音视频和标准资源 ZIP 直接进入本地流程，不需要插件。
 
 ## 智云插件
 
-插件和配套浏览器脚本位于独立仓库：https://github.com/Silhouette-my/zhiyun-collector 。当前配套版本为 `0.3.0.dev2`；按该仓库说明安装对应 macOS / Windows 构建，并从可信发布渠道核对工具身份及可执行文件 SHA-256。插件不随本仓库 wheel、源码包或启动包分发。
+插件和配套浏览器脚本位于独立仓库：https://github.com/Silhouette-my/zhiyun-collector 。当前配套版本为 `0.3.0.dev3`；按该仓库说明安装对应 macOS / Windows 构建，并从可信发布渠道核对工具身份及可执行文件 SHA-256。插件不随本仓库 wheel、源码包或启动包分发。
 
 ```bash
 course-compiler collector-configure \
