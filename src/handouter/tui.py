@@ -80,10 +80,6 @@ def available_agent_choices() -> tuple[list[str], dict[str, str]]:
             continue
         values.append(item.name)
         labels[item.name] = {"codex": "Codex CLI", "claude": "Claude CLI"}.get(item.name, f"{item.name} CLI")
-    if "codex" in labels and sys.platform == "win32":
-        # codex-cli has no working workspace-write sandbox on native Windows, so
-        # the adapter runs it unsandboxed (in a throwaway copy); say so up front.
-        labels["codex"] = _t("agent_codex_windows")
     return values, labels
 
 

@@ -24,8 +24,7 @@ def sandbox_arguments(platform_name: str | None = None) -> list[str]:
     This is a real loss of isolation, not an equivalent: the throw-away copy
     the runner starts the agent in only decides what it is handed and what is
     audited afterwards. An unsandboxed Codex can still reach the network and
-    any path the user can write. The TUI labels the choice "no sandbox on
-    Windows" and the README states it; switch back once Codex ships a usable
+    any path the user can write. Switch back once Codex ships a usable
     Windows sandbox."""
     if (platform_name or sys.platform) == "win32":
         return ["--dangerously-bypass-approvals-and-sandbox"]

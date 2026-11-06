@@ -63,7 +63,6 @@ _TEXT: dict[str, tuple[str, str]] = {
     "option_agent": ("写作方式", "Agent"),
     "agent_web": ("网页 AI 手动上传", "Web Chat (TXT/PDF)"),
     "agent_manual": ("打包给桌面 App", "GUI handoff"),
-    "agent_codex_windows": ("Codex CLI（Windows 上无沙箱）", "Codex CLI (no sandbox on Windows)"),
     "option_language": ("界面语言", "Language"),
     # Actions
     "box_actions": (" 操作 ", " ACTIONS "),
