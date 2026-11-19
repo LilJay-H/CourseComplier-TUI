@@ -24,7 +24,8 @@ def asset_fingerprint(path: str | Path) -> str:
     """Content identity excludes private URL query rotation, never stores URLs."""
     digest = hashlib.sha256()
     with zipfile.ZipFile(path) as archive:
-        if "handouter-input.json" not in archive.namelist():
+        from coursecompiler_local.assets import standard_manifest_name
+        if standard_manifest_name(archive.namelist()) is None:
             from .external_collector import inspect_browser_export
             details = inspect_browser_export(path)
             return details.get("source_fingerprint") or details["source_sha256"]

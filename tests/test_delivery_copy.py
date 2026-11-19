@@ -5,7 +5,7 @@ import shutil
 import tempfile
 import unittest
 
-from handouter.delivery import publish_deliverables
+from coursecompiler.delivery import publish_deliverables
 
 
 class DeliveryCopyTests(unittest.TestCase):
@@ -17,7 +17,7 @@ class DeliveryCopyTests(unittest.TestCase):
         self.workspace = self.collection / '资料与交接' / 'lecture-id'
         for path in ('notes', 'handoff', 'slides/images'):
             (self.workspace / path).mkdir(parents=True, exist_ok=True)
-        from handouter.organization import course_name
+        from coursecompiler.organization import course_name
         base = course_name('课程', None)
         self.organization = {'version': 2, 'lecture_id': 'lecture-id', 'course_title': '课程',
             'lecture_date': None, 'base_name': base, 'name_prefix': '课程_授课日期待确认'}

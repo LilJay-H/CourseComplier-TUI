@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from handouter import platform_support
-from handouter import settings
+from coursecompiler import platform_support
+from coursecompiler import settings
 
 
 class DirectorySettingsTests(unittest.TestCase):
@@ -23,8 +23,8 @@ class DirectorySettingsTests(unittest.TestCase):
 
     def test_defaults_do_not_create_any_directories(self):
         result = settings.load_directory_settings()
-        self.assertEqual(result, {'input_dir': str(self.root / 'Desktop/Handouter/输入'),
-                                 'output_dir': str(self.root / 'Desktop/Handouter/输出'),
+        self.assertEqual(result, {'input_dir': str(self.root / 'Desktop/CourseCompiler/输入'),
+                                 'output_dir': str(self.root / 'Desktop/CourseCompiler/输出'),
                                  'course_output_dirs': {}, 'course_aliases': {},
                                  'course_folder_modes': {}, 'configured': False})
         self.assertEqual(list(self.root.iterdir()), [])
@@ -41,6 +41,30 @@ class DirectorySettingsTests(unittest.TestCase):
         self.assertEqual(set(json.loads(self.config.read_text())),
                          {'schema_version', 'input_dir', 'output_dir', 'course_output_dirs',
                           'course_aliases', 'course_folder_modes'})
+
+    def test_new_config_precedes_legacy_and_legacy_is_not_moved(self):
+        from unittest.mock import patch
+        current = self.root / 'CourseCompiler' / 'directories.json'
+        legacy = self.root / 'Handouter' / 'directories.json'
+        legacy.parent.mkdir()
+        legacy.write_text(json.dumps({'input_dir': str(self.root / 'old-in'),
+                                      'output_dir': str(self.root / 'old-out')}))
+        with patch.object(settings, 'directory_settings_path', return_value=current):
+            self.assertEqual(settings.load_directory_settings()['output_dir'], str(self.root / 'old-out'))
+            self.assertFalse(current.exists())
+            current.parent.mkdir()
+            current.write_text(json.dumps({'input_dir': str(self.root / 'new-in'),
+                                          'output_dir': str(self.root / 'new-out')}))
+            self.assertEqual(settings.load_directory_settings()['output_dir'], str(self.root / 'new-out'))
+            settings.save_directory_settings(output_dir=self.root / 'changed-out')
+            self.assertEqual(json.loads(legacy.read_text())['output_dir'], str(self.root / 'old-out'))
+
+    def test_defaults_use_coursecompiler_desktop(self):
+        from unittest.mock import patch
+        with patch.object(settings, 'desktop_directory', return_value=self.root):
+            value = settings._defaults()
+        self.assertEqual(value['input_dir'], str(self.root / 'CourseCompiler' / '输入'))
+        self.assertFalse((self.root / 'CourseCompiler').exists())
 
     def test_old_two_field_settings_remain_compatible(self):
         self.config.parent.mkdir(parents=True)
@@ -108,7 +132,7 @@ class DirectorySettingsTests(unittest.TestCase):
     def test_directories_cli_sets_default_and_course_output_independently(self):
         import contextlib
         import io
-        from handouter import cli
+        from coursecompiler import cli
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
             self.assertEqual(cli.main(['directories', '--input-dir', str(self.root / 'input'),
@@ -128,7 +152,7 @@ class DirectorySettingsTests(unittest.TestCase):
     def test_directories_cli_alias_and_folder_policy_round_trip(self):
         import contextlib
         import io
-        from handouter import cli
+        from coursecompiler import cli
         settings.save_directory_settings(self.root / 'input', self.root / 'default')
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
@@ -149,7 +173,7 @@ class DirectorySettingsTests(unittest.TestCase):
     def test_run_uses_course_override_when_output_is_not_explicit(self):
         import contextlib
         import io
-        from handouter import cli
+        from coursecompiler import cli
         source = self.root / 'lecture.txt'
         source.write_text('Synthetic lecture.', encoding='utf-8')
         settings.save_directory_settings(self.root / 'input', self.root / 'default')
@@ -166,7 +190,7 @@ class DirectorySettingsTests(unittest.TestCase):
     def test_run_alias_uses_canonical_course_and_auto_avoids_duplicate_folder_name(self):
         import contextlib
         import io
-        from handouter import cli
+        from coursecompiler import cli
         source = self.root / 'lecture-alias.txt'
         source.write_text('Synthetic lecture.', encoding='utf-8')
         settings.save_directory_settings(self.root / 'input', self.root / 'default')
@@ -253,7 +277,7 @@ class DirectorySettingsTests(unittest.TestCase):
                 ('linux', {'XDG_CONFIG_HOME': 'relative'}, self.root / '.config'),
             ]:
                 with self.subTest(platform=platform, environment=environment), patch.object(settings.sys, 'platform', platform), patch.dict(os.environ, environment):
-                    self.assertEqual(settings.directory_settings_path(), expected / 'Handouter/directories.json')
+                    self.assertEqual(settings.directory_settings_path(), expected / 'CourseCompiler/directories.json')
 
     def test_macos_desktop_is_home_desktop(self):
         with patch.object(platform_support.sys, 'platform', 'darwin'), patch.object(Path, 'home', return_value=self.root):

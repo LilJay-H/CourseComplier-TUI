@@ -14,11 +14,28 @@ import unittest
 from unittest.mock import patch
 import zipfile
 
-from handouter import external_collector as bridge
+from coursecompiler import external_collector as bridge
 
 
 @unittest.skipIf(os.name == "nt", "POSIX executable fixture; native Windows containment has its own tests")
 class ExternalCollectionTests(unittest.TestCase):
+    def test_existing_plugin_configuration_read_without_moving(self):
+        from unittest.mock import patch
+        from coursecompiler.external_collector import load_configuration
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            current = root / "CourseCompiler" / "collector.json"
+            legacy = root / "Handouter" / "collector.json"
+            legacy.parent.mkdir()
+            legacy.write_text('{"marker": "legacy"}')
+            with patch("coursecompiler.external_collector.configuration_path", return_value=current), \
+                 patch("coursecompiler.external_collector._validated", side_effect=lambda value: value):
+                self.assertEqual(load_configuration()["marker"], "legacy")
+                current.parent.mkdir()
+                current.write_text('{"marker": "current"}')
+                self.assertEqual(load_configuration()["marker"], "current")
+            self.assertTrue(legacy.exists())
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
@@ -145,13 +162,13 @@ time.sleep(30)
             self.assertFalse(bridge._group_has_no_live_members(222))
 
     def test_checked_standard_package_uses_streaming_budget_and_preserves_source_fingerprint(self):
-        from handouter.service import build_from_asset_zip
-        from handouter.tasks import plan_task
+        from coursecompiler.service import build_from_asset_zip
+        from coursecompiler.tasks import plan_task
         self.configure()
         skill = self.root / "SKILL.md"
         skill.write_text("# Synthetic test skill\nUse only supplied evidence.\n")
-        with patch("handouter.importers.MAX_ZIP_BYTES", 1), \
-                patch("handouter.service.import_local_asset_zip", side_effect=AssertionError("legacy bounded importer used")), \
+        with patch("coursecompiler.importers.MAX_ZIP_BYTES", 1), \
+                patch("coursecompiler.service.import_local_asset_zip", side_effect=AssertionError("legacy bounded importer used")), \
                 patch.object(zipfile.ZipFile, "read", side_effect=AssertionError("whole ZIP member read")):
             result = build_from_asset_zip(self.root / "workspaces", asset_zip=self.source,
                 lecture_id="synthetic-course", course_title="Synthetic course", skill_path=skill,
@@ -163,8 +180,8 @@ time.sleep(30)
         self.assertNotEqual(plan_task(workspace, input_fingerprint=fingerprint).action, "refresh_required")
 
     def test_second_cli_run_reuses_the_existing_checked_workspace(self):
-        from handouter import cli
-        from handouter.service import build_from_asset_zip
+        from coursecompiler import cli
+        from coursecompiler.service import build_from_asset_zip
         with zipfile.ZipFile(self.source, "w") as archive:
             archive.writestr("opaque.dat", "synthetic browser data")
         self.configure()
@@ -176,8 +193,8 @@ time.sleep(30)
                 "--skill-path", str(skill), "--legacy-layout"]
         settings = {"input_dir":str(self.root),"output_dir":str(self.root / "out"),
                     "course_output_dirs":{},"course_aliases":{},"course_folder_modes":{}}
-        with patch("handouter.settings.load_directory_settings", return_value=settings), \
-                patch("handouter.cli.build_from_asset_zip", wraps=build_from_asset_zip) as build, \
+        with patch("coursecompiler.settings.load_directory_settings", return_value=settings), \
+                patch("coursecompiler.cli.build_from_asset_zip", wraps=build_from_asset_zip) as build, \
                 contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(cli.main(args), 0)
             self.assertEqual(cli.main(args), 0)

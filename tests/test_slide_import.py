@@ -16,7 +16,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
-import handouter.importers as slide_importers
+import coursecompiler.importers as slide_importers
 
 # Tiny PNG fixture, including a valid PNG header; no model or image library needed.
 PNG = base64.b64decode(

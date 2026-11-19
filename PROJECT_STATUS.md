@@ -1,5 +1,9 @@
 # 当前状态
 
+## CourseCompiler 命名迁移
+
+独立发行包改为 `coursecompiler-tui`，Python 模块改为 `coursecompiler` 和 `coursecompiler_local`，与主仓安装在不同虚拟环境；本机合成采集器测试、源码外安装 wheel 与 sdist 重建安装通过。旧版采集器和已有课程包的 `handouter-input.json` 仍可读取；新名课程包也可读取，两个清单并存时拒绝。尚未在 Windows 原生或真实平台测试，未发布新版。
+
 2026-10-25：TUI 已抽取为独立本地 Git 仓库，可安装、启动和继续开发。GUI、Server、云客户端/协议和 GUI runtime 未进入本仓库；本地 Workflow 规则、用户 Agent 适配器和材料链路保留。来源记录见 NOTICE.md / provenance.json，归属清单见 docs/SPLIT_SCOPE.md。
 
 ## 本次外部采集器迁移（2026-10-25）
@@ -7,7 +11,7 @@
 - 已将原仓 `0a21e87` 的通用外部采集宿主同步到协作分支 `codex/external-collector-sync`；已经 PR #1 合并到 `main`（`5280a2c`）。
 - 新增 `collector-configure` / `collector-inspect`；浏览器 ZIP 在 TUI 中先确认域名，再由独立插件下载转换。TXT、音视频、标准 ZIP 和两个命令入口保留。
 - 智云页面解析、私有媒体字段读取、默认站点 Referer 与浏览器脚本不再内置。插件与脚本由 `Silhouette-my/zhiyun-collector`（0.3.0.dev2）单独提供，安装见 `docs/EXTERNAL_COLLECTOR.md`。
-- 仅复用 `handouter_local` 三个离线标准包校验文件；无 GUI runtime、GGUF、组件管理、云客户端。保留同伴课程别名/目录参数和 POSIX 路径修复。
+- 仅复用 `coursecompiler_local` 三个离线标准包校验文件；无 GUI runtime、GGUF、组件管理、云客户端。保留同伴课程别名/目录参数和 POSIX 路径修复。
 - macOS / Python 3.11.16：采集宿主专项 12 项通过；full 门禁 220 项，零失败/错误，1 项真实 Windows Job Object 用例按平台跳过。覆盖域名确认、工具/材料绑定、超时子进程树清理、完整标准包预检与流式解包、缓存复用、旧输入和发行白名单。
 - 临时虚拟环境源码外安装 wheel 后，`--installed-smoke --profile full` 通过；标准转写包及标准音频包经过真实 FFmpeg、模拟 ASR/Agent 子进程，获得两份 Markdown 和内嵌数学/课件图的离线 HTML。未使用真实模型。证据：`build/tests-full.json` 与 `/private/tmp/tui-sync-wheel-example-complete/summary.json`（本机临时文件，不随发行）。
 - 新采集桥接尚未在 Windows 原生环境或真实课程平台验证；下方 Windows 证据属于拆分前的原行为，不代表新插件迁移的 Windows 验收。未调用真实模型或学校媒体。

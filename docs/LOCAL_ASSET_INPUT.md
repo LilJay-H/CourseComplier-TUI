@@ -8,17 +8,17 @@ Course Compiler 的普通入口不要求材料来自智云。用户可以直接�
 
 ```bash
 # 本地音频：直接运行 SenseVoice
-handouter run --audio lecture.m4a --course-title "课程名" --lecture-id lecture-01
+coursecompiler run --audio lecture.m4a --course-title "课程名" --lecture-id lecture-01
 
 # 本地视频：先用 ffmpeg 提取音频，再运行 SenseVoice
-handouter run --media lecture.mp4 --course-title "课程名" --lecture-id lecture-01
+coursecompiler run --media lecture.mp4 --course-title "课程名" --lecture-id lecture-01
 
 # 已有转写：不运行 ASR
-handouter run --transcript transcript.txt --transcript-origin provided_transcript \
+coursecompiler run --transcript transcript.txt --transcript-origin provided_transcript \
   --course-title "课程名" --lecture-id lecture-01
 
 # 智云 ZIP 或下述站点无关资产 ZIP
-handouter run --asset lecture.zip
+coursecompiler run --asset lecture.zip
 ```
 
 本地文件未指定标题时使用文件名；未指定 lecture ID 时使用内容 SHA-256 的稳定短 ID `local-<12 hex>`。授课日期不会从文件时间、下载时间或导出时间猜测，只接受显式 `--lecture-date YYYY-MM-DD` 或资产清单中的 `lecture.lecture_date`。
@@ -43,13 +43,13 @@ handouter run --asset lecture.zip
 
 ## 2. 多资产 ZIP
 
-ZIP 根目录必须有 `handouter-input.json`。所有路径都是 ZIP 内相对 POSIX 路径，不能使用绝对路径、`..`、反斜杠、符号链接或大小写/Unicode 重名。
+ZIP 根目录使用 `coursecompiler-input.json`；兼容已有 `handouter-input.json`，不能同时包含两份清单。所有路径都是 ZIP 内相对 POSIX 路径，不能使用绝对路径、`..`、反斜杠、符号链接或大小写/Unicode 重名。
 
 推荐布局：
 
 ```text
 lecture.zip
-├── handouter-input.json
+├── coursecompiler-input.json
 ├── audio/
 │   └── lecture.m4a
 ├── transcript/
@@ -163,6 +163,6 @@ segments 继续使用 Course Compiler 的整数毫秒契约：
 
 ## 6. 兼容与验收边界
 
-旧的 `handouter run --asset zhiyun.zip`、`build-audio`、`build-media` 和 `prepare` 保持兼容。站点无关 ZIP 使用 `source_type=local_asset_package`；松散音频、媒体、转写分别保持现有本地来源语义。
+旧的 `coursecompiler run --asset zhiyun.zip`、`build-audio`、`build-media` 和 `prepare` 保持兼容。站点无关 ZIP 使用 `source_type=local_asset_package`；松散音频、媒体、转写分别保持现有本地来源语义。
 
 合成测试只能证明格式解析、路径安全、分派、工作区复制和现有回归没有破坏。真实网站下载所得媒体的编码、真实长课 ASR、Windows 拖入路径、TUI 真人操作和语义质量仍须分别验收。

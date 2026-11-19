@@ -12,7 +12,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-from handouter.html_export import export_html
+from coursecompiler.html_export import export_html
 
 READY = all(importlib.util.find_spec(name) for name in ('markdown_it', 'mdit_py_plugins', 'latex2mathml'))
 
@@ -20,8 +20,8 @@ READY = all(importlib.util.find_spec(name) for name in ('markdown_it', 'mdit_py_
 @unittest.skipUnless(READY, 'HTML extra not installed')
 class HTMLExportTests(unittest.TestCase):
     def test_loaded_chinese_examples_render_folds_math_and_literal_figure_syntax(self):
-        from handouter.handoff import default_skill_path
-        from handouter.html_export import render_note
+        from coursecompiler.handoff import default_skill_path
+        from coursecompiler.html_export import render_note
         examples = default_skill_path().parent / 'references/examples'
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -41,7 +41,7 @@ class HTMLExportTests(unittest.TestCase):
             self.assertIn('verified-one-by-one.png', rendered['visual'])
 
     def test_handoff_includes_offline_dual_delivery_rules(self):
-        from handouter.service import prepare_lecture
+        from coursecompiler.service import prepare_lecture
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             transcript = root / 'transcript.txt'
@@ -62,8 +62,8 @@ class HTMLExportTests(unittest.TestCase):
             self.assertIn('公式离线呈现', delivery)
 
     def test_agent_command_reports_html_failure_without_losing_markdown(self):
-        from handouter.cli import main
-        from handouter.service import prepare_lecture
+        from coursecompiler.cli import main
+        from coursecompiler.service import prepare_lecture
         with tempfile.TemporaryDirectory() as td:
             source = Path(td) / 'source.txt'
             source.write_text('Synthetic 中文。', encoding='utf-8')
@@ -73,8 +73,8 @@ class HTMLExportTests(unittest.TestCase):
             note = root / prepared.handoff.output_path
             note.write_text('# Complete Markdown\n\n$x$\n', encoding='utf-8')
             original = note.read_bytes()
-            with patch('handouter.cli.run_cli_agent', side_effect=AssertionError('HTML retry must not call Agent')), \
-                 patch('handouter.html_export.render_note', side_effect=ValueError('unsupported formula')), \
+            with patch('coursecompiler.cli.run_cli_agent', side_effect=AssertionError('HTML retry must not call Agent')), \
+                 patch('coursecompiler.html_export.render_note', side_effect=ValueError('unsupported formula')), \
                  contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
                 code = main(['agent-run', str(root), '--agent', 'codex'])
             self.assertNotEqual(code, 0)
@@ -83,7 +83,7 @@ class HTMLExportTests(unittest.TestCase):
             self.assertEqual(note.read_bytes(), original)
 
     def test_cli_exports_json_and_real_html(self):
-        from handouter.cli import main
+        from coursecompiler.cli import main
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             self.fixture(root)
@@ -94,8 +94,8 @@ class HTMLExportTests(unittest.TestCase):
             self.assertIn('<math', Path(paths[0]).read_text(encoding='utf-8'))
 
     def test_agent_exports_only_this_runs_outputs(self):
-        from handouter.agents.base import AgentRunResult
-        from handouter.html_export import export_agent_html
+        from coursecompiler.agents.base import AgentRunResult
+        from coursecompiler.html_export import export_agent_html
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             self.fixture(root)
@@ -200,7 +200,7 @@ class HTMLExportTests(unittest.TestCase):
             self.assertEqual(list((root / 'notes').glob('*.html')), [])
 
     def test_layout_css_preserves_aspect_ratio_and_responsive_reading_order(self):
-        from handouter.html_export import STYLE
+        from coursecompiler.html_export import STYLE
         for selector in ('.ppt-figure', '.ppt-half', '.ppt-third', '.ppt-cols-2', '.ppt-cols-3', '.ppt-grid-2x2'):
             self.assertIn(selector, STYLE)
         self.assertIn('height:auto', STYLE)
@@ -232,7 +232,7 @@ class HTMLExportTests(unittest.TestCase):
             self.assertFalse(note.with_suffix('.html').exists())
 
     def test_complete_layers_and_context_before_figures_survive_export(self):
-        from handouter.validation import _VisibleNoteText
+        from coursecompiler.validation import _VisibleNoteText
         with tempfile.TemporaryDirectory() as td:
             root = Path(td).resolve()
             note = self.fixture(root)

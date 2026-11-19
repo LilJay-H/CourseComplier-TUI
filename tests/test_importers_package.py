@@ -14,8 +14,8 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from handouter.importers import import_slides_zip
-from handouter.service import BuildResult, build_from_asset_zip, prepare_lecture
+from coursecompiler.importers import import_slides_zip
+from coursecompiler.service import BuildResult, build_from_asset_zip, prepare_lecture
 
 PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jG9kAAAAASUVORK5CYII="
@@ -60,10 +60,10 @@ class PackageImporterTests(unittest.TestCase):
     def test_build_asset_passes_only_checked_standard_package_to_local_pipeline(self):
         self.make_exporter_zip()
         sentinel = object()
-        with patch("handouter.external_collector.inspect_browser_export", return_value={
+        with patch("coursecompiler.external_collector.inspect_browser_export", return_value={
                 "source_sha256": "a" * 64, "collector_binding": "b" * 64}), \
-                patch("handouter.external_collector.convert_browser_export") as collect, \
-                patch("handouter.service.build_from_local_asset_zip", return_value=sentinel) as build:
+                patch("coursecompiler.external_collector.convert_browser_export") as collect, \
+                patch("coursecompiler.service.build_from_local_asset_zip", return_value=sentinel) as build:
             result = build_from_asset_zip(
                 self.root / "workspace",
                 lecture_id="a-01",

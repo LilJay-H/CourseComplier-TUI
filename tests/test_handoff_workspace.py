@@ -14,9 +14,9 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from handouter import cli
-from handouter.service import prepare_lecture
-from handouter.validation import validate_note_output, validate_workspace
+from coursecompiler import cli
+from coursecompiler.service import prepare_lecture
+from coursecompiler.validation import validate_note_output, validate_workspace
 
 
 class HandoffWorkspaceTests(unittest.TestCase):

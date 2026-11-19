@@ -14,11 +14,11 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from handouter.agents.base import AgentAvailability
-from handouter.agents.runner import run_cli_agent
-from handouter.service import prepare_lecture, refresh_handoff
-from handouter.skill_plan import plan_modules
-from handouter.tasks import plan_task
+from coursecompiler.agents.base import AgentAvailability
+from coursecompiler.agents.runner import run_cli_agent
+from coursecompiler.service import prepare_lecture, refresh_handoff
+from coursecompiler.skill_plan import plan_modules
+from coursecompiler.tasks import plan_task
 
 
 MODULE = "handoff/skill/references/execution/local-agent.md"
@@ -53,7 +53,7 @@ class LocalAgentWorkflowTests(unittest.TestCase):
         result = self.prepare()
         sources = self.sources(result.workspace)
         self.assertIn(MODULE, sources["skill"]["modules"])
-        from handouter.local_agent_workflow import INSTRUCTIONS
+        from coursecompiler.local_agent_workflow import INSTRUCTIONS
 
         self.assertEqual((result.workspace / MODULE).read_bytes(), INSTRUCTIONS.encode("utf-8"))
         prompt = (result.workspace / "handoff/PROMPT.md").read_text(encoding="utf-8")
@@ -94,7 +94,7 @@ class LocalAgentWorkflowTests(unittest.TestCase):
             for path in [sources["skill"]["entry"], *sources["skill"]["modules"]]
         }
         self.assertEqual(rule_hashes[MODULE], hashlib.sha256((result.workspace / MODULE).read_bytes()).hexdigest())
-        from handouter.authoring import make_contract
+        from coursecompiler.authoring import make_contract
 
         unbound = dict(sources)
         unbound.pop("authoring")
@@ -153,7 +153,7 @@ class LocalAgentWorkflowTests(unittest.TestCase):
         self.assertNotIn(MODULE, self.sources(result.workspace)["skill"]["modules"])
 
     def test_manual_bundle_contains_local_agent_module(self):
-        from handouter.agents.manual import create_manual_bundle
+        from coursecompiler.agents.manual import create_manual_bundle
 
         result = self.prepare("manual")
         bundle = create_manual_bundle(result.workspace)
@@ -164,11 +164,11 @@ class LocalAgentWorkflowTests(unittest.TestCase):
             self.assertIn(MODULE.encode(), archive.read("handoff/PROMPT.md"))
 
     def test_web_handoff_materials_contains_local_agent_module_bytes(self):
-        from handouter.agents.web import create_web_handoff
+        from coursecompiler.agents.web import create_web_handoff
 
         result = self.prepare("web")
         web = create_web_handoff(result.workspace)
-        from handouter.local_agent_workflow import INSTRUCTIONS
+        from coursecompiler.local_agent_workflow import INSTRUCTIONS
 
         self.assertIn(INSTRUCTIONS.encode("utf-8"), web.materials.read_bytes())
 
@@ -185,12 +185,12 @@ class LocalAgentWorkflowTests(unittest.TestCase):
                 (task / relative).write_text("# 本地讲义\n\n依据课程材料整理。\n", encoding="utf-8")
             return SimpleNamespace(returncode=0)
 
-        with patch("handouter.agents.codex.availability", return_value=AgentAvailability("codex", True, "/fake/codex", "cli")), \
-             patch("handouter.agents.codex.build_command", return_value=["/fake/codex", "exec", "-"]), \
-             patch("handouter.agents.runner.subprocess.run", side_effect=fake_run):
+        with patch("coursecompiler.agents.codex.availability", return_value=AgentAvailability("codex", True, "/fake/codex", "cli")), \
+             patch("coursecompiler.agents.codex.build_command", return_value=["/fake/codex", "exec", "-"]), \
+             patch("coursecompiler.agents.runner.subprocess.run", side_effect=fake_run):
             run = run_cli_agent(result.workspace, agent="codex")
 
-        from handouter.local_agent_workflow import INSTRUCTIONS
+        from coursecompiler.local_agent_workflow import INSTRUCTIONS
         output = result.workspace / run.outputs["deep"]
         self.assertTrue(run.validation_ok, run.validation_errors)
         self.assertEqual(observed["module"], INSTRUCTIONS.encode("utf-8"))

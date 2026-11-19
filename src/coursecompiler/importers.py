@@ -12,6 +12,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path, PurePosixPath
 
 from .platform_support import is_portable_path_component
+from coursecompiler_local.assets import LOCAL_ASSET_MANIFEST, standard_manifest_name
 
 MAX_ZIP_MEMBERS = 10_000
 MAX_ZIP_BYTES = 512 * 1024 * 1024
@@ -21,7 +22,6 @@ IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
 LOCAL_AUDIO_SUFFIXES = {".aac", ".flac", ".m4a", ".mp3", ".ogg", ".opus", ".wav"}
 LOCAL_MEDIA_SUFFIXES = {".avi", ".m2ts", ".m4v", ".mkv", ".mov", ".mp4", ".mpeg", ".mpg", ".mts", ".ts", ".webm"}
 LOCAL_TRANSCRIPT_SUFFIXES = {".txt"}
-LOCAL_ASSET_MANIFEST = "handouter-input.json"
 
 
 @dataclass(frozen=True)
@@ -64,16 +64,16 @@ def _manifest_path(value, name):
     if text is None:
         return None
     path = _safe_zip_name(text)
-    if path.as_posix() == LOCAL_ASSET_MANIFEST:
+    if standard_manifest_name((path.as_posix(),)) is not None:
         raise ValueError(f"{name} 不能指向资产清单本身")
     return path.as_posix()
 
 
 def _parse_local_asset_manifest(value: object) -> dict:
     if not isinstance(value, dict) or set(value) - {"schema_version", "lecture", "audio", "media", "transcript", "slides"}:
-        raise ValueError("handouter-input.json 包含未知字段或不是对象")
+        raise ValueError("标准包清单包含未知字段或不是对象")
     if type(value.get("schema_version")) is not int or value["schema_version"] != 1:
-        raise ValueError("handouter-input.json schema_version 必须为 1")
+        raise ValueError("标准包清单 schema_version 必须为 1")
     lecture = _optional_object(value.get("lecture"), "lecture") or {}
     if set(lecture) - {"id", "course_title", "lecture_date"}:
         raise ValueError("lecture 包含未知字段")
@@ -150,13 +150,14 @@ def _local_manifest_from_archive(archive: zipfile.ZipFile) -> tuple[dict, dict[s
             raise ValueError("不接受 ZIP 符号链接或加密成员")
         if not info.is_dir() and "__MACOSX" not in name.parts:
             files[name.as_posix()] = info
-    info = files.get(LOCAL_ASSET_MANIFEST)
+    manifest_name = standard_manifest_name(files)
+    info = files[manifest_name] if manifest_name else None
     if info is None or info.file_size > MAX_METADATA_BYTES:
         raise ValueError(f"本地资产 ZIP 缺少根目录 {LOCAL_ASSET_MANIFEST} 或清单过大")
     try:
         manifest = json.loads(archive.read(info).decode("utf-8-sig"))
     except (UnicodeError, ValueError) as exc:
-        raise ValueError("handouter-input.json 不是有效 UTF-8 JSON") from exc
+        raise ValueError("标准包清单不是有效 UTF-8 JSON") from exc
     return _parse_local_asset_manifest(manifest), files
 
 

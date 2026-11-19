@@ -6,10 +6,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from handouter.cli import _continue_payload
-from handouter.delivery import publication_current, publish_deliverables
-from handouter.service import prepare_lecture
-from handouter.tasks import import_note, plan_task, record_html_exports, retry_html
+from coursecompiler.cli import _continue_payload
+from coursecompiler.delivery import publication_current, publish_deliverables
+from coursecompiler.service import prepare_lecture
+from coursecompiler.tasks import import_note, plan_task, record_html_exports, retry_html
 
 
 class HTMLRequestPolicyTests(unittest.TestCase):
@@ -46,9 +46,9 @@ class HTMLRequestPolicyTests(unittest.TestCase):
         return [target]
 
     def test_all_opted_out_complete_without_dependencies_or_export(self):
-        with patch('handouter.doctor.require_features', side_effect=AssertionError('No HTML dependencies')), \
-             patch('handouter.html_export.export_html', side_effect=AssertionError('No export')), \
-             patch('handouter.cli.run_cli_agent', side_effect=AssertionError('No model')):
+        with patch('coursecompiler.doctor.require_features', side_effect=AssertionError('No HTML dependencies')), \
+             patch('coursecompiler.html_export.export_html', side_effect=AssertionError('No export')), \
+             patch('coursecompiler.cli.run_cli_agent', side_effect=AssertionError('No model')):
             for mode in self.outputs:
                 result = self.import_without_html(mode)
                 self.assertEqual(result['html_delivery']['status'], 'not_requested')
@@ -128,8 +128,8 @@ class HTMLRequestPolicyTests(unittest.TestCase):
     def test_explicit_retry_reopens_only_selected_mode_even_if_dependencies_fail(self):
         for mode in self.outputs:
             self.import_without_html(mode)
-        with patch('handouter.doctor.require_features', side_effect=RuntimeError('Synthetic missing dependency')), \
-             patch('handouter.html_export.export_html') as export:
+        with patch('coursecompiler.doctor.require_features', side_effect=RuntimeError('Synthetic missing dependency')), \
+             patch('coursecompiler.html_export.export_html') as export:
             result = retry_html(self.workspace, modes=['deep'])
         export.assert_not_called()
         self.assertEqual(result['status'], 'failed')
@@ -143,8 +143,8 @@ class HTMLRequestPolicyTests(unittest.TestCase):
             self.write_note(mode)
         self.assertNotIn('requested', self.state().get('html_delivery', {}))
         self.assertEqual(plan_task(self.workspace).action, 'html_only')
-        with patch('handouter.doctor.require_features'), \
-             patch('handouter.html_export.export_html', side_effect=self.fake_export) as export:
+        with patch('coursecompiler.doctor.require_features'), \
+             patch('coursecompiler.html_export.export_html', side_effect=self.fake_export) as export:
             result = retry_html(self.workspace)
         self.assertEqual(result['status'], 'ready', result)
         self.assertEqual({call.args[0].relative_to(self.workspace).as_posix()
@@ -152,8 +152,8 @@ class HTMLRequestPolicyTests(unittest.TestCase):
         self.assertEqual(plan_task(self.workspace).action, 'complete')
 
     def test_default_import_still_requests_html(self):
-        with patch('handouter.doctor.require_features'), \
-             patch('handouter.html_export.export_html', side_effect=self.fake_export) as export:
+        with patch('coursecompiler.doctor.require_features'), \
+             patch('coursecompiler.html_export.export_html', side_effect=self.fake_export) as export:
             result = import_note(self.workspace, self.returned, mode='deep',
                                  task_id=plan_task(self.workspace).task_id)
         self.assertEqual(result['html_delivery']['status'], 'ready', result)
@@ -164,9 +164,9 @@ class HTMLRequestPolicyTests(unittest.TestCase):
         self.import_without_html('deep')
         self.write_note('summary')
         self.assertEqual(plan_task(self.workspace).action, 'html_only')
-        with patch('handouter.doctor.require_features'), \
-             patch('handouter.html_export.export_html', side_effect=self.fake_export) as export, \
-             patch('handouter.cli.run_cli_agent', side_effect=AssertionError('No model')):
+        with patch('coursecompiler.doctor.require_features'), \
+             patch('coursecompiler.html_export.export_html', side_effect=self.fake_export) as export, \
+             patch('coursecompiler.cli.run_cli_agent', side_effect=AssertionError('No model')):
             result = retry_html(self.workspace, requested_only=True)
         self.assertEqual(result['status'], 'ready', result)
         export.assert_called_once_with(self.workspace / self.outputs['summary'])
@@ -178,9 +178,9 @@ class HTMLRequestPolicyTests(unittest.TestCase):
     def test_cli_mixed_mode_continuation_respects_opt_out(self):
         self.import_without_html('deep')
         self.write_note('summary')
-        with patch('handouter.doctor.require_features'), \
-             patch('handouter.html_export.export_html', side_effect=self.fake_export) as export, \
-             patch('handouter.cli.run_cli_agent', side_effect=AssertionError('No model')):
+        with patch('coursecompiler.doctor.require_features'), \
+             patch('coursecompiler.html_export.export_html', side_effect=self.fake_export) as export, \
+             patch('coursecompiler.cli.run_cli_agent', side_effect=AssertionError('No model')):
             payload, code = _continue_payload(self.workspace)
         self.assertEqual(code, 0, payload)
         self.assertEqual(payload['status'], 'complete')
@@ -199,8 +199,8 @@ class HTMLRequestPolicyTests(unittest.TestCase):
     def test_empty_retry_does_not_check_dependencies_or_generate_html(self):
         for mode in self.outputs:
             self.import_without_html(mode)
-        with patch('handouter.doctor.require_features', side_effect=AssertionError('No HTML dependencies')), \
-             patch('handouter.html_export.export_html', side_effect=AssertionError('No export')):
+        with patch('coursecompiler.doctor.require_features', side_effect=AssertionError('No HTML dependencies')), \
+             patch('coursecompiler.html_export.export_html', side_effect=AssertionError('No export')):
             result = retry_html(self.workspace, requested_only=True)
         self.assertEqual(result['status'], 'not_requested', result)
         self.assertEqual(result['errors'], [])
@@ -220,8 +220,8 @@ class HTMLRequestPolicyTests(unittest.TestCase):
             record_html_exports(self.workspace, [(note, html)])
             return [html]
 
-        with patch('handouter.doctor.require_features'), \
-             patch('handouter.html_export.export_html', side_effect=export_and_record) as export:
+        with patch('coursecompiler.doctor.require_features'), \
+             patch('coursecompiler.html_export.export_html', side_effect=export_and_record) as export:
             result = retry_html(self.workspace, modes=['deep'])
         self.assertEqual(result['status'], 'ready', result)
         export.assert_called_once_with(self.workspace / self.outputs['deep'])
@@ -234,8 +234,8 @@ class HTMLRequestPolicyTests(unittest.TestCase):
     def test_explicit_retry_without_modes_reopens_all_modes(self):
         for mode in self.outputs:
             self.import_without_html(mode)
-        with patch('handouter.doctor.require_features'), \
-             patch('handouter.html_export.export_html', side_effect=self.fake_export) as export:
+        with patch('coursecompiler.doctor.require_features'), \
+             patch('coursecompiler.html_export.export_html', side_effect=self.fake_export) as export:
             result = retry_html(self.workspace)
         self.assertEqual(result['status'], 'ready', result)
         self.assertEqual(export.call_count, 2)

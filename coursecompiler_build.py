@@ -17,7 +17,7 @@ import tomllib
 import zipfile
 
 ROOT = Path(__file__).resolve().parent
-SRC = ROOT / "src" / "handouter"
+SRC = ROOT / "src" / "coursecompiler"
 
 
 def _release_files() -> list[str]:
@@ -66,15 +66,14 @@ def _metadata_text() -> str:
 
 
 def _wheel_text() -> str:
-    return "Wheel-Version: 1.0\nGenerator: handouter-build\nRoot-Is-Purelib: true\nTag: py3-none-any\n"
+    return "Wheel-Version: 1.0\nGenerator: coursecompiler-tui-build\nRoot-Is-Purelib: true\nTag: py3-none-any\n"
 
 
 def _entry_points_text() -> str:
-    # Both commands enter the same CLI; the distribution and import names stay
-    # stable so existing installs and integrations continue to work.
+    # Both commands enter the standalone CLI; use a separate virtual environment.
     return ("[console_scripts]\n"
-            "course-compiler = handouter.cli:main\n"
-            "handouter = handouter.cli:main\n")
+            "course-compiler = coursecompiler.cli:main\n"
+            "coursecompiler = coursecompiler.cli:main\n")
 
 
 def _record_row(name: str, data: bytes) -> list[str]:
@@ -94,15 +93,15 @@ def _build_wheel_file(wheel_directory: str, *, editable: bool) -> str:
         f"{dist_info}/entry_points.txt": _entry_points_text().encode(),
     }
     if editable:
-        files["handouter-editable.pth"] = (str((ROOT / "src").resolve()) + os.linesep).encode()
+        files["coursecompiler-tui-editable.pth"] = (str((ROOT / "src").resolve()) + os.linesep).encode()
     else:
         for relative in _release_files():
             path = ROOT / relative
-            if relative.startswith(("src/handouter/", "src/handouter_local/")):
+            if relative.startswith(("src/coursecompiler/", "src/coursecompiler_local/")):
                 files[relative.removeprefix("src/")] = path.read_bytes()
             elif relative.startswith(".agents/skills/zhiyun-lecture-notes/"):
                 suffix = relative.removeprefix(".agents/skills/zhiyun-lecture-notes/")
-                files["handouter/assets/zhiyun-lecture-notes/" + suffix] = path.read_bytes()
+                files["coursecompiler/assets/zhiyun-lecture-notes/" + suffix] = path.read_bytes()
             elif relative in {"NOTICE.md", "provenance.json"}:
                 files[f"{dist_info}/" + relative] = path.read_bytes()
 

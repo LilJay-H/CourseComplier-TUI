@@ -7,9 +7,9 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from handouter.typora_export import export_typora, typora_markdown
-from handouter.resources import parse_resources
-from handouter.cli import main
+from coursecompiler.typora_export import export_typora, typora_markdown
+from coursecompiler.resources import parse_resources
+from coursecompiler.cli import main
 
 
 IMAGE = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=')
@@ -35,8 +35,8 @@ class TyporaExportTests(unittest.TestCase):
                 self.assertIn('状态 &amp; 条件', result)
 
     def test_mathematical_caption_moves_outside_html_paragraph(self):
-        from handouter.math_markup import math_spans
-        from handouter.resources import markdown_parser
+        from coursecompiler.math_markup import math_spans
+        from coursecompiler.resources import markdown_parser
         source = figure(classes='ppt-figure ppt-half', caption=r'关系 $a\cup b$')
         result = typora_markdown(source)
         self.assertIn('width="50%"', result)
@@ -46,7 +46,7 @@ class TyporaExportTests(unittest.TestCase):
                           if token.type == 'html_block' for span in math_spans(token.content)])
 
     def test_export_protects_math_table_tail_cells(self):
-        from handouter.resources import markdown_parser
+        from coursecompiler.resources import markdown_parser
         with tempfile.TemporaryDirectory() as td:
             note = Path(td) / 'table.md'
             note.write_text('| name | formula | tail |\n| --- | --- | --- |\n'

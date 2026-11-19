@@ -1,10 +1,10 @@
-# Course Compiler TUI
+# CourseCompiler TUI
 
 独立的本地 CLI/TUI：接收本地音视频、转写和标准资源 ZIP；浏览器导出 ZIP 经独立安装的采集插件确认媒体域名后在本机下载，再转写、整理工作区，再交给用户自己安装并登录的 Codex / Claude CLI 执行 Workflow，生成 Markdown 与离线 HTML。
 
 保留 Complete / Deep / Full / Summary / Verbatim、手动交接、已有讲义续作和结构校验。本仓库包含本地 Workflow 必需规则；不包含 GUI、Server、团队高精度 Agent 服务、云客户端或团队 token。
 
-这是面向开源方向的独立仓库，当前托管于 [GitHub 公开仓库](https://github.com/LilJay-H/CourseComplier-TUI)；许可证尚未确认，见 [来源与归属](NOTICE.md)。包名仍为 `handouter`，两个命令 `course-compiler`、`handouter` 兼容。请用独立虚拟环境，避免覆盖旧混合仓库的同名安装。
+这是面向开源方向的独立仓库，当前托管于 [GitHub 公开仓库](https://github.com/LilJay-H/CourseComplier-TUI)；许可证尚未确认，见 [来源与归属](NOTICE.md)。发行包名为 `coursecompiler-tui`，导入包为 `coursecompiler` / `coursecompiler_local`，命令为 `course-compiler` 或 `coursecompiler`。必须与主仓安装在独立虚拟环境中，两者共享 Python 导入名。
 
 ## 安装与启动
 
@@ -25,8 +25,8 @@ macOS/Linux 对应使用 `.venv/bin/python` 和 `.venv/bin/course-compiler`。Wi
 完整准备可复用安装器：
 
 ```powershell
-python setup_handouter.py
-python setup_handouter.py --start
+python setup_coursecompiler.py
+python setup_coursecompiler.py --start
 ```
 
 安装器创建或复用项目 `.venv`，安装 ASR/HTML 依赖，检查 FFmpeg（缺失时尝试系统包管理器），下载并加载 SenseVoiceSmall + FSMN-VAD，再检查运行时。`--skip-model-download` 只跳过模型准备；`--without-asr` 不装 ASR、不下模型，但仍检查媒体工具。已有环境不会自动删掉或升级解释器。Windows 也可用 `setup-course-compiler.cmd` / `start-course-compiler.cmd`；macOS 对应 `.command`。Linux 若缺 FFmpeg，先由系统包管理器安装。
@@ -55,7 +55,7 @@ TUI 沿用 **FunASR + Torch 的 SenseVoiceSmall / FSMN-VAD**，支持 CPU 和可
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/check_release.py --profile full
-.\.venv\Scripts\python.exe -c "import handouter_build as b; print(b.build_wheel('dist')); print(b.build_sdist('dist'))"
+.\.venv\Scripts\python.exe -c "import coursecompiler_build as b; print(b.build_wheel('dist')); print(b.build_sdist('dist'))"
 ```
 
 `core` 是较小开发门禁，测试前需要 PATH 中的 FFmpeg/ffprobe；浏览器脚本测试在独立插件仓库运行。`full` 包含本地输入、媒体/模拟 ASR、交接、续作、成品和 Windows 进程相关路径；全部保留测试用 `--exhaustive`，不包含云测试。构建源码白名单为 `release-files.json`，增加发行文件时同步更新。wheel 安装后可在任意目录运行，不要求原仓库存在。
@@ -64,7 +64,7 @@ TUI 沿用 **FunASR + Torch 的 SenseVoiceSmall / FSMN-VAD**，支持 CPU 和可
 
 ```powershell
 python -m venv C:\Temp\course-compiler-env
-C:\Temp\course-compiler-env\Scripts\python.exe -m pip install "E:\codex\CourseComplier-TUI\dist\handouter-0.2.0-py3-none-any.whl[html]"
+C:\Temp\course-compiler-env\Scripts\python.exe -m pip install "E:\codex\CourseCompiler-TUI\dist\coursecompiler_tui-0.2.0-py3-none-any.whl[html]"
 C:\Temp\course-compiler-env\Scripts\course-compiler.exe tui
 ```
 

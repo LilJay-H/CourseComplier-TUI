@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from handouter.math_markup import (math_spans, math_diagnostics, normalize_table_math,
+from coursecompiler.math_markup import (math_spans, math_diagnostics, normalize_table_math,
                                    repair_math_escapes)
 
 
@@ -60,7 +60,7 @@ class MathMarkupTests(unittest.TestCase):
         self.assertEqual(normalize_table_math('text $|x|$\n'), 'text $|x|$\n')
 
     def test_resource_scanner_sees_cells_after_formula_pipes(self):
-        from handouter.resources import parse_resources
+        from coursecompiler.resources import parse_resources
         table = ('| formula | image |\n| --- | --- |\n'
                  + r'| $|x|$ | ![plot](missing.png) |' + '\n')
         self.assertEqual(parse_resources(table).images, ('missing.png',))
@@ -148,7 +148,7 @@ READY = all(importlib.util.find_spec(name) for name in ('markdown_it', 'mdit_py_
 @unittest.skipUnless(READY, 'HTML extra not installed')
 class MathRenderingTests(unittest.TestCase):
     def render(self, source):
-        from handouter.html_export import render_note
+        from coursecompiler.html_export import render_note
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             note = root / 'synthetic.md'
@@ -199,7 +199,7 @@ class MathRenderingTests(unittest.TestCase):
         self.assertEqual(output.count('<math '), 2)
 
     def test_corrupt_formula_never_publishes_successful_html(self):
-        from handouter.html_export import export_html
+        from coursecompiler.html_export import export_html
         with tempfile.TemporaryDirectory() as td:
             note = Path(td) / 'synthetic.md'
             note.write_text('$' + chr(7) + 'pprox 1$', encoding='utf-8')
@@ -216,7 +216,7 @@ class MathRenderingTests(unittest.TestCase):
         self.assertIn('$z$', output)
 
     def test_active_content_in_fold_is_not_sanitized_into_acceptance(self):
-        from handouter.html_export import export_html
+        from coursecompiler.html_export import export_html
         with tempfile.TemporaryDirectory() as td:
             note = Path(td) / 'synthetic.md'
             note.write_text('<details><summary>$x$</summary><script>bad()</script></details>', encoding='utf-8')
@@ -225,7 +225,7 @@ class MathRenderingTests(unittest.TestCase):
             self.assertEqual(list(Path(td).glob('*.html')), [])
 
     def test_directory_export_skips_derived_typora_copies(self):
-        from handouter.html_export import export_html
+        from coursecompiler.html_export import export_html
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / 'notes').mkdir()

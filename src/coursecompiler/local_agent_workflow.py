@@ -15,7 +15,7 @@ slides 和 formats 模块决定；本模块只规定执行顺序，不增加未�
 ## 运行与记录边界
 
 本机 Codex / Claude CLI 使用用户已安装并登录的 Agent 和其可用工具。可分次读取
-授权文件、查看图片、写指定 Markdown；不要求模型 API Key，不调用 Handouter 云服务。
+授权文件、查看图片、写指定 Markdown；不要求模型 API Key，不调用 CourseCompiler 云服务。
 材料仍会交给所选 Agent 的模型服务处理，本机 Agent 不等于离线本地模型。
 工具可用不等于允许联网：外部检索继续受 sources.options.allow_web 约束。
 

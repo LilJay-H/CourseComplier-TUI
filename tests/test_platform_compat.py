@@ -16,8 +16,8 @@ from unittest.mock import Mock, patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from handouter.doctor import run_doctor
-from handouter.platform_support import (
+from coursecompiler.doctor import run_doctor
+from coursecompiler.platform_support import (
     WINDOWS_CREATE_NEW_PROCESS_GROUP,
     _force_termination,
     _request_termination,
@@ -26,7 +26,7 @@ from handouter.platform_support import (
     start_task_process,
     terminate_process_tree,
 )
-from handouter.product import normalize_terminal_path
+from coursecompiler.product import normalize_terminal_path
 
 
 class TerminalPathTests(unittest.TestCase):
@@ -69,11 +69,11 @@ class DoctorTests(unittest.TestCase):
                 return object()
             return real_find_spec(name)
 
-        with patch("handouter.doctor.platform.system", return_value="Windows"), patch(
-            "handouter.doctor.importlib.util.find_spec", side_effect=fake_find_spec
-        ), patch("handouter.doctor._version", side_effect=lambda name: "2.4.1" if name == "windows-curses" else "1.0"), patch(
-            "handouter.doctor.find_executable", side_effect=lambda name: f"C:/tools/{name}.exe"
-        ), patch("handouter.doctor.shutil.which", side_effect=lambda name: f"C:/tools/{name}.exe"):
+        with patch("coursecompiler.doctor.platform.system", return_value="Windows"), patch(
+            "coursecompiler.doctor.importlib.util.find_spec", side_effect=fake_find_spec
+        ), patch("coursecompiler.doctor._version", side_effect=lambda name: "2.4.1" if name == "windows-curses" else "1.0"), patch(
+            "coursecompiler.doctor.find_executable", side_effect=lambda name: f"C:/tools/{name}.exe"
+        ), patch("coursecompiler.doctor.shutil.which", side_effect=lambda name: f"C:/tools/{name}.exe"):
             report = run_doctor()
         self.assertEqual(report["platform"], "Windows")
         self.assertTrue(report["ok_tui"])
@@ -83,7 +83,7 @@ class DoctorTests(unittest.TestCase):
 
 class ProcessTreeTests(unittest.TestCase):
     def test_tui_cleans_task_when_reader_thread_cannot_start(self):
-        from handouter.tui import _run_task
+        from coursecompiler.tui import _run_task
 
         process = Mock()
         process.poll.return_value = None
@@ -96,10 +96,10 @@ class ProcessTreeTests(unittest.TestCase):
             process.poll.return_value = -15
             return cleanup
 
-        with patch("handouter.tui._task_cli_args", return_value=(["doctor"], "build")), \
-             patch("handouter.tui.start_task_process", return_value=(process, job)), \
-             patch("handouter.tui.threading.Thread", return_value=reader), \
-             patch("handouter.tui._terminate_process_group", side_effect=cancel):
+        with patch("coursecompiler.tui._task_cli_args", return_value=(["doctor"], "build")), \
+             patch("coursecompiler.tui.start_task_process", return_value=(process, job)), \
+             patch("coursecompiler.tui.threading.Thread", return_value=reader), \
+             patch("coursecompiler.tui._terminate_process_group", side_effect=cancel):
             with self.assertRaisesRegex(RuntimeError, "cannot start reader"):
                 _run_task(Mock(), {}, prompt_only=False)
         job.close.assert_called_once()
@@ -148,7 +148,7 @@ class ProcessTreeTests(unittest.TestCase):
                 self.terminated = True
 
         process = FakeProcess()
-        with patch("handouter.platform_support.signal.CTRL_BREAK_EVENT", None, create=True):
+        with patch("coursecompiler.platform_support.signal.CTRL_BREAK_EVENT", None, create=True):
             _request_termination(process, "nt")
         self.assertTrue(process.terminated)
 
@@ -162,8 +162,8 @@ class ProcessTreeTests(unittest.TestCase):
             def kill(self):
                 raise AssertionError("taskkill should be attempted first")
 
-        with patch("handouter.platform_support.time.sleep"), patch(
-            "handouter.platform_support.subprocess.run",
+        with patch("coursecompiler.platform_support.time.sleep"), patch(
+            "coursecompiler.platform_support.subprocess.run",
             return_value=subprocess.CompletedProcess([], 0),
         ) as run:
             _force_termination(FakeProcess(), grace_seconds=0, platform_name="nt")
@@ -177,14 +177,14 @@ class ProcessTreeTests(unittest.TestCase):
             def poll(self):
                 return None
 
-        with patch("handouter.platform_support.os.killpg", create=True) as killpg:
+        with patch("coursecompiler.platform_support.os.killpg", create=True) as killpg:
             _request_termination(FakeProcess(), "posix")
         killpg.assert_called_once_with(987, __import__("signal").SIGTERM)
 
     @unittest.skipUnless(hasattr(signal, "SIGKILL"), "POSIX-only test")
     def test_posix_force_kills_group_after_root_has_exited(self):
         process = SimpleNamespace(pid=987, poll=lambda: 0)
-        with patch("handouter.platform_support.os.killpg", create=True) as killpg:
+        with patch("coursecompiler.platform_support.os.killpg", create=True) as killpg:
             _force_termination(process, grace_seconds=0, platform_name="posix")
         killpg.assert_called_once_with(987, signal.SIGKILL)
 
@@ -221,11 +221,11 @@ class ProcessTreeTests(unittest.TestCase):
 
     def test_windows_launch_passes_only_job_handle_and_closes_on_spawn_failure(self):
         job = SimpleNamespace(handle=123, close=Mock())
-        with patch("handouter.platform_support.is_windows", return_value=True), \
-             patch("handouter.platform_support._WindowsJob", return_value=job), \
-             patch("handouter.platform_support.subprocess.STARTUPINFO", SimpleNamespace, create=True), \
-             patch("handouter.platform_support.os.set_handle_inheritable", create=True) as inheritable, \
-             patch("handouter.platform_support.subprocess.Popen", side_effect=OSError("spawn failed")) as popen:
+        with patch("coursecompiler.platform_support.is_windows", return_value=True), \
+             patch("coursecompiler.platform_support._WindowsJob", return_value=job), \
+             patch("coursecompiler.platform_support.subprocess.STARTUPINFO", SimpleNamespace, create=True), \
+             patch("coursecompiler.platform_support.os.set_handle_inheritable", create=True) as inheritable, \
+             patch("coursecompiler.platform_support.subprocess.Popen", side_effect=OSError("spawn failed")) as popen:
             with self.assertRaisesRegex(OSError, "spawn failed"):
                 start_task_process(["doctor"], env={"PYTHONUTF8": "1"})
         kwargs = popen.call_args.kwargs
@@ -242,8 +242,8 @@ class ProcessTreeTests(unittest.TestCase):
             CloseHandle=Mock(),
         )
         with patch.dict(os.environ, {"HANDOUTER_TASK_JOB_HANDLE": "123"}), \
-             patch("handouter.platform_support.is_windows", return_value=True), \
-             patch("handouter.platform_support._windows_job_api", return_value=api), \
+             patch("coursecompiler.platform_support.is_windows", return_value=True), \
+             patch("coursecompiler.platform_support._windows_job_api", return_value=api), \
              patch("ctypes.get_last_error", return_value=5, create=True), \
              patch("ctypes.WinError", return_value=OSError("assignment denied"), create=True):
             with self.assertRaisesRegex(OSError, "assignment denied"):
@@ -257,7 +257,7 @@ class ProcessTreeTests(unittest.TestCase):
         # Exercise the real launch/handle inheritance with a disposable task body.
         child = "import os,time; print(os.getpid(), flush=True); time.sleep(30)"
         parent = (
-            "from handouter.platform_support import _join_inherited_windows_job; "
+            "from coursecompiler.platform_support import _join_inherited_windows_job; "
             "_join_inherited_windows_job(); "
             "import subprocess,sys; subprocess.Popen([sys.executable, '-c', sys.argv[1]])"
         )
@@ -270,7 +270,7 @@ class ProcessTreeTests(unittest.TestCase):
             return real_popen([sys._base_executable, "-c", parent, child], **kwargs)
 
         env = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
-        with patch("handouter.platform_support.subprocess.Popen", side_effect=synthetic_task):
+        with patch("coursecompiler.platform_support.subprocess.Popen", side_effect=synthetic_task):
             process, job = start_task_process(["doctor"], env=env, stdout=subprocess.PIPE, text=True)
         drained = threading.Event()
         try:

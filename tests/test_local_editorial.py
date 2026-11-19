@@ -17,15 +17,15 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
-from handouter import editorial_review as er
-from handouter.editorial_context import context, page
-from handouter.service import prepare_lecture, refresh_handoff
-from handouter.tasks import plan_task
-from handouter.validation import validate_note_output
-from handouter.agents.base import AgentAvailability
-from handouter.agents.runner import run_cli_agent
-from handouter.cli import main
-from handouter.skill_plan import RULES_VERSION
+from coursecompiler import editorial_review as er
+from coursecompiler.editorial_context import context, page
+from coursecompiler.service import prepare_lecture, refresh_handoff
+from coursecompiler.tasks import plan_task
+from coursecompiler.validation import validate_note_output
+from coursecompiler.agents.base import AgentAvailability
+from coursecompiler.agents.runner import run_cli_agent
+from coursecompiler.cli import main
+from coursecompiler.skill_plan import RULES_VERSION
 
 
 def encoded(value):
@@ -222,7 +222,7 @@ class LocalEditorialTests(unittest.TestCase):
         view = plan_task(self.root).quality['complete']
         self.assertEqual(view['source_preservation']['status'], 'not_run')
         self.assertEqual(view['rendering']['status'], 'not_run')
-        from handouter.tui import _result_rows
+        from coursecompiler.tui import _result_rows
         rows = '\n'.join(_result_rows(self.root))
         self.assertIn('no automatic semantic certification', rows)
         self.assertIn('technical: not_run', rows)
@@ -258,7 +258,7 @@ class LocalEditorialTests(unittest.TestCase):
         self.assertEqual(self.note.read_bytes(), original)
 
     def test_calculation_reuses_bounded_exact_grammar(self):
-        from handouter.editorial_context import calculate
+        from coursecompiler.editorial_context import calculate
         result = calculate('1-(1-0.2)^3', domain='decimal_rational')
         self.assertEqual((result['numerator'], result['denominator']), ('61', '125'))
         for expression in ('__import__("os")', '2^10000', '1/0', 'a+b', '2 cm'):
@@ -267,7 +267,7 @@ class LocalEditorialTests(unittest.TestCase):
         with self.assertRaises(ValueError): calculate('1+1', domain='boolean')
 
     def test_web_materials_keep_review_policy_and_model_unknown(self):
-        from handouter.agents.web import create_web_handoff
+        from coursecompiler.agents.web import create_web_handoff
         web = create_web_handoff(self.root)
         text = web.materials.read_text()
         self.assertIn('"editorial_review": {', text)
@@ -340,9 +340,9 @@ class LocalEditorialTests(unittest.TestCase):
             value['reports'][0]['checks']['source_preservation'] = findings
             (task / er.RECORD_PATH).write_bytes(encoded(value))
             return SimpleNamespace(returncode=0)
-        with patch('handouter.agents.codex.availability', return_value=AgentAvailability('codex', True, '/fake/codex', 'cli')), \
-             patch('handouter.agents.codex.build_command', return_value=['/fake/codex']), \
-             patch('handouter.agents.runner.subprocess.run', side_effect=fake_run) as invoke:
+        with patch('coursecompiler.agents.codex.availability', return_value=AgentAvailability('codex', True, '/fake/codex', 'cli')), \
+             patch('coursecompiler.agents.codex.build_command', return_value=['/fake/codex']), \
+             patch('coursecompiler.agents.runner.subprocess.run', side_effect=fake_run) as invoke:
             run = run_cli_agent(self.root, agent='codex')
         self.assertTrue(run.validation_ok, run.validation_errors)
         self.assertEqual(invoke.call_count, 1)
@@ -356,9 +356,9 @@ class LocalEditorialTests(unittest.TestCase):
             (task / source['expected_outputs']['complete']).write_text('# 完整合成稿\n\n示例正文。\n')
             (task / er.RECORD_PATH).write_text('{"passed":true}')
             return SimpleNamespace(returncode=0)
-        with patch('handouter.agents.codex.availability', return_value=AgentAvailability('codex', True, '/fake/codex', 'cli')), \
-             patch('handouter.agents.codex.build_command', return_value=['/fake/codex']), \
-             patch('handouter.agents.runner.subprocess.run', side_effect=fake_run):
+        with patch('coursecompiler.agents.codex.availability', return_value=AgentAvailability('codex', True, '/fake/codex', 'cli')), \
+             patch('coursecompiler.agents.codex.build_command', return_value=['/fake/codex']), \
+             patch('coursecompiler.agents.runner.subprocess.run', side_effect=fake_run):
             run = run_cli_agent(self.root, agent='codex')
         self.assertTrue(run.validation_ok, run.validation_errors)
         state = json.loads((self.root / 'state.json').read_text())
@@ -366,7 +366,7 @@ class LocalEditorialTests(unittest.TestCase):
         self.assertEqual(plan_task(self.root).quality['complete']['editorial_state'], 'not_assessed')
 
     def test_late_unit_can_be_added_to_existing_editorial_record(self):
-        from handouter.authoring import validate_progress
+        from coursecompiler.authoring import validate_progress
         record = {'schema_version': 1, 'task_key': self.sources['authoring']['task_key'],
             'units': [], 'next_unit': 'late', 'pending_corrections': ['末尾例题条件仍待核对'], 'completed_modes': []}
         record['units'].append({'id': 'late', 'source_refs': ['transcript:L3-L3'], 'goal': '补回遗漏主题',

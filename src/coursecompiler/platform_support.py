@@ -180,7 +180,7 @@ def _join_inherited_windows_job() -> None:
 
 def start_task_process(cli_args: list[str], **kwargs: Any) -> tuple[subprocess.Popen[str], _WindowsJob | None]:
     """Start a managed CLI task, with a Windows job established before workers."""
-    command = [sys.executable, "-m", "handouter.platform_support", *cli_args]
+    command = [sys.executable, "-m", "coursecompiler.platform_support", *cli_args]
     kwargs.update(process_group_popen_kwargs())
     env = dict(kwargs.get("env", os.environ))
     env.pop(_TASK_JOB_ENV, None)

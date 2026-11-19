@@ -12,12 +12,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
 sys.path.insert(0, str(ROOT))
 
-from handouter.handoff import default_skill_path
-from handouter.skill_plan import RULES_VERSION, SLIDE_LAYOUT_MODULE, SLIDE_READING_MODULE, plan_modules
-from handouter.service import prepare_lecture, refresh_handoff
-from handouter.agents.manual import create_manual_bundle
-from handouter.agents.web import create_web_handoff
-from handouter.resources import check_resources, parse_resources
+from coursecompiler.handoff import default_skill_path
+from coursecompiler.skill_plan import RULES_VERSION, SLIDE_LAYOUT_MODULE, SLIDE_READING_MODULE, plan_modules
+from coursecompiler.service import prepare_lecture, refresh_handoff
+from coursecompiler.agents.manual import create_manual_bundle
+from coursecompiler.agents.web import create_web_handoff
+from coursecompiler.resources import check_resources, parse_resources
 
 
 PNG = base64.b64decode(

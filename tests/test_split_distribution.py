@@ -7,7 +7,7 @@ import tempfile
 import unittest
 import zipfile
 
-import handouter_build as build
+import coursecompiler_build as build
 
 ROOT = Path(__file__).resolve().parents[1]
 FORBIDDEN = ('handouter_server', 'handouter_client', 'handouter_protocol')
@@ -32,7 +32,7 @@ class SplitDistributionTests(unittest.TestCase):
                 names = [a.name for a in node.names] if isinstance(node, ast.Import) else (
                     [node.module or ''] if isinstance(node, ast.ImportFrom) else [])
                 self.assertFalse(any(n.startswith(FORBIDDEN) for n in names), str(path))
-        self.assertEqual({p.name for p in (ROOT / 'src/handouter_local').glob('*.py')},
+        self.assertEqual({p.name for p in (ROOT / 'src/coursecompiler_local').glob('*.py')},
                          {'__init__.py', 'assets.py', 'contract.py'})
 
     def test_wheel_and_sdist_are_local_only_and_keep_provenance(self):
@@ -40,11 +40,11 @@ class SplitDistributionTests(unittest.TestCase):
             with zipfile.ZipFile(Path(temporary) / build.build_wheel(temporary)) as wheel:
                 names = wheel.namelist()
                 self.assertFalse(any(n.startswith(FORBIDDEN) for n in names))
-                self.assertEqual({n for n in names if n.startswith('handouter_local/')},
-                                 {'handouter_local/__init__.py', 'handouter_local/assets.py', 'handouter_local/contract.py'})
+                self.assertEqual({n for n in names if n.startswith('coursecompiler_local/')},
+                                 {'coursecompiler_local/__init__.py', 'coursecompiler_local/assets.py', 'coursecompiler_local/contract.py'})
                 self.assertFalse(any(n.endswith('.user.js') or 'zhiyun_collector' in n for n in names))
-                self.assertIn('handouter/sensevoice_normalize.py', names)
-                self.assertIn('handouter/assets/zhiyun-lecture-notes/SKILL.md', names)
+                self.assertIn('coursecompiler/sensevoice_normalize.py', names)
+                self.assertIn('coursecompiler/assets/zhiyun-lecture-notes/SKILL.md', names)
                 self.assertIn(build._dist_info() + '/NOTICE.md', names)
                 metadata = wheel.read(build._dist_info() + '/METADATA').decode()
                 self.assertNotIn('Provides-Extra: cloud', metadata)

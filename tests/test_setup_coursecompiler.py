@@ -11,7 +11,7 @@ import subprocess
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import setup_handouter as setup
+import setup_coursecompiler as setup
 
 
 class SetupTests(unittest.TestCase):
@@ -47,7 +47,7 @@ class SetupTests(unittest.TestCase):
             root = Path(td)
             # Exercise only the real discovery function. Never execute the
             # bootstrap's package-manager fallback, including on regressions.
-            discovery = (setup.ROOT / 'setup-handouter.command').read_text().split('\nrefresh_brew_path()', 1)[0]
+            discovery = (setup.ROOT / 'setup-coursecompiler.command').read_text().split('\nrefresh_brew_path()', 1)[0]
             script = root / 'discover.command'
             script.write_text(discovery + '\nfind_python\n')
             binaries = root / 'bin'

@@ -440,7 +440,7 @@ def _repairs(root, sources, plan, data, bound, report, request, snapshot, call, 
                 value = call('repair', req, {**repair_input, CURRENT: data.decode('utf-8')[loc.start:loc.end].encode('utf-8')})
                 candidate, raw, manifest, affected = repair_candidate(data, value, bound, issue, allowed, root, sources, plan)
                 # Structural/resource/quote checks run against an isolated material copy.
-                with tempfile.TemporaryDirectory(prefix='handouter-repair-') as temporary:
+                with tempfile.TemporaryDirectory(prefix='coursecompiler-repair-') as temporary:
                     task = Path(temporary)
                     from .agents.manual import selected_files
                     for relative, content in selected_files(root, sources).items():

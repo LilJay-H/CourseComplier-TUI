@@ -324,7 +324,7 @@ def import_note(workspace, returned, *, mode: str, task_id: str, html: bool = Tr
         publish_bytes(root, draft, data)
         return {'status': 'needs_images', 'draft': draft, 'mode': mode,
                 'next_step': '补齐真实图片后重新提交；当前不算完成嵌图', 'semantic_review': 'required'}
-    with tempfile.TemporaryDirectory(prefix='handouter-import-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='coursecompiler-import-') as temporary:
         task = Path(temporary).resolve()
         snapshot = selected_files(root, sources)
         snapshot['handoff/sources.json'] = json.dumps(sources, ensure_ascii=False).encode()

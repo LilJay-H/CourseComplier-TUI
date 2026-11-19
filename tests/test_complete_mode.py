@@ -14,15 +14,15 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
 sys.path.insert(0, str(ROOT))
 
-from handouter.cli import _build_parser, main
-from handouter.handoff import default_skill_path
-from handouter.service import prepare_lecture, refresh_handoff
-from handouter.skill_plan import RULES_VERSION, plan_modules
-from handouter.agents.manual import create_manual_bundle
-from handouter.agents.web import create_web_handoff
-from handouter.tasks import plan_task
-from handouter.tui import selected_modes, build_cli_args, _load_workspace_into_state, _safe_preferences
-from handouter.validation import validate_workspace, validate_note_output
+from coursecompiler.cli import _build_parser, main
+from coursecompiler.handoff import default_skill_path
+from coursecompiler.service import prepare_lecture, refresh_handoff
+from coursecompiler.skill_plan import RULES_VERSION, plan_modules
+from coursecompiler.agents.manual import create_manual_bundle
+from coursecompiler.agents.web import create_web_handoff
+from coursecompiler.tasks import plan_task
+from coursecompiler.tui import selected_modes, build_cli_args, _load_workspace_into_state, _safe_preferences
+from coursecompiler.validation import validate_workspace, validate_note_output
 
 PNG = base64.b64decode(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=')

@@ -21,6 +21,16 @@ import zipfile
 from . import local_budget_env
 
 from .contract import LocalError
+LOCAL_ASSET_MANIFEST = "coursecompiler-input.json"
+_MANIFEST_NAMES = (LOCAL_ASSET_MANIFEST, "handouter-input.json")
+
+
+def standard_manifest_name(names) -> str | None:
+    matches = [name for name in _MANIFEST_NAMES if name in names]
+    if len(matches) > 1:
+        raise LocalError("INVALID_ASSET", "Ambiguous standard package: two root manifests")
+    return matches[0] if matches else None
+
 
 MAX_MEMBERS = 10_000
 MAX_UNCOMPRESSED = 8 * 1024**3
@@ -122,7 +132,7 @@ def _role_path(value: object, role: str, suffixes: set[str] | None = None) -> st
     path = _safe_name(value)
     if suffixes is not None and PurePosixPath(path).suffix.lower() not in suffixes:
         raise LocalError("INVALID_ASSET", f"Unsupported {role} type")
-    if path == "handouter-input.json":
+    if path in _MANIFEST_NAMES:
         raise LocalError("INVALID_ASSET", "Manifest cannot be material")
     return path
 
@@ -341,9 +351,10 @@ def inspect(path: str | Path) -> Asset:
                      {kind: source.name}, (), None if kind == "transcript" else digest)
     with zipfile.ZipFile(source) as archive:
         entries = _entries(archive)
-        manifest = entries.get("handouter-input.json")
-        if manifest is None:
-            raise LocalError("INVALID_ASSET", "Missing root handouter-input.json")
+        manifest_name = standard_manifest_name(entries)
+        if manifest_name is None:
+            raise LocalError("INVALID_ASSET", "Missing root coursecompiler-input.json")
+        manifest = entries[manifest_name]
         try:
             version, title, day, roles = _manifest(json.loads(_read_small(archive, manifest, MAX_METADATA).decode("utf-8-sig")))
         except (UnicodeError, json.JSONDecodeError) as exc:
@@ -356,7 +367,7 @@ def inspect(path: str | Path) -> Asset:
                                        and "/" not in name[len(prefix):] and PurePosixPath(name).suffix.lower() in IMAGES))
             if not slide_files:
                 raise LocalError("INVALID_ASSET", "Declared slide directory has no images")
-        allowed = required | set(slide_files) | {"handouter-input.json"}
+        allowed = required | set(slide_files) | {manifest_name}
         speech_member = roles.get("audio") or roles.get("media")
         speech_digest = None
         if not required <= set(entries) or set(entries) - allowed:

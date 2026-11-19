@@ -62,7 +62,7 @@ def _lecture_args(parser: argparse.ArgumentParser, *, transcript: bool) -> None:
     parser.add_argument("--slides-dir", help="可选 PPT 图片目录；可内含 slides_meta.json")
     parser.add_argument("--slides-meta", help="可选独立 slides_meta.json；用于旧版元数据与图片分目录布局")
     parser.add_argument("--slides-zip", help="可选浏览器资产 ZIP；与 slides-dir/slides-meta 互斥，private/ 不会进入交接")
-    parser.add_argument("--workspace-root", "--output-dir", dest="workspace_root", default=None, help="输出根目录；默认使用保存设置或桌面 Handouter/输出")
+    parser.add_argument("--workspace-root", "--output-dir", dest="workspace_root", default=None, help="输出根目录；默认使用保存设置或桌面 CourseCompiler/输出")
     _mode_args(parser)
 
 
@@ -118,11 +118,11 @@ def _build_parser() -> argparse.ArgumentParser:
     collector_inspect.add_argument("source")
 
     run = sub.add_parser("run", help="面向普通用户：站点资产 ZIP 或本地音频/媒体/转写 -> 标准工作区与讲义")
-    run.add_argument("--input-dir", default=None, help="扫描 ZIP 的目录；默认保存设置或桌面 Handouter/输入")
-    run.add_argument("--output-dir", default=None, help="输出根目录；默认保存设置或桌面 Handouter/输出")
+    run.add_argument("--input-dir", default=None, help="扫描 ZIP 的目录；默认保存设置或桌面 CourseCompiler/输入")
+    run.add_argument("--output-dir", default=None, help="输出根目录；默认保存设置或桌面 CourseCompiler/输出")
     _organization_args(run)
     run_source_input = run.add_mutually_exclusive_group()
-    run_source_input.add_argument("--asset", help="智云 ZIP 或含 handouter-input.json 的站点无关本地资产 ZIP")
+    run_source_input.add_argument("--asset", help="智云 ZIP 或含 coursecompiler-input.json 的站点无关本地资产 ZIP（兼容旧清单）")
     run_source_input.add_argument("--audio", help="本地音频文件；运行本地 ASR")
     run_source_input.add_argument("--media", help="本地音频/视频文件；先抽取音频再运行本地 ASR")
     run_source_input.add_argument("--transcript", help="已有 UTF-8 TXT 转写；不运行 ASR")
@@ -210,7 +210,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     revise = sub.add_parser("revise", help="直接提交已有讲义创建新任务，不下载音频或运行 ASR")
     revise.add_argument("source_note", help="UTF-8 .md/.txt 讲义")
-    revise.add_argument("--output-dir", default=None, help="新任务输出目录；默认保存设置或桌面 Handouter/输出")
+    revise.add_argument("--output-dir", default=None, help="新任务输出目录；默认保存设置或桌面 CourseCompiler/输出")
     _organization_args(revise)
     revise.add_argument("--lecture-id", required=True, help="新的任务 ID，不能覆盖已有工作区")
     revise.add_argument("--course-title", help="课程标题，默认取讲义文件名")
@@ -694,7 +694,7 @@ def _revise(args: argparse.Namespace) -> int:
     revision = read_revision_note(args.source_note, action=args.revision_action, note_only=True)
     course_title, output_root, aliases, folder_mode = _course_output_context(
         args.course_title or Path(args.source_note).stem, explicit=args.output_dir)
-    with TemporaryDirectory(prefix="handouter-note-") as temporary:
+    with TemporaryDirectory(prefix="coursecompiler-note-") as temporary:
         snapshot = Path(temporary) / "submitted.txt"
         snapshot.write_text(revision["text"], encoding="utf-8")
         result = prepare_lecture(

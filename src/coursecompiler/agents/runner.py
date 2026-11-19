@@ -58,7 +58,7 @@ def invoke_stage_process(root, snapshot, prompt, adapter, model, *, observation=
     """One bounded stage, using the same adapter and inventory protection."""
     from ..authoring_stages import RESULT
     formal_before = _formal_inventory(root)
-    with tempfile.TemporaryDirectory(prefix='handouter-stage-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='coursecompiler-stage-') as temporary:
         task = Path(temporary).resolve()
         for relative, data in snapshot.items():
             path = task / relative
@@ -128,7 +128,7 @@ def _run_cli_agent(
 ) -> AgentRunResult:
     """Run one CLI agent non-interactively against a prepared workspace.
 
-    Child output is forwarded to stderr so Handouter's stdout can remain a
+    Child output is forwarded to stderr so CourseCompiler's stdout can remain a
     machine-readable JSON result when called through the CLI.
     """
     name = agent.strip().lower()
@@ -182,7 +182,7 @@ def _run_cli_agent(
         prompt = _stage_context['prompt']
     # No hard links, original paths, audio, raw ASR, history or old notes are
     # supplied. This is write isolation by copying, not an OS security sandbox.
-    with tempfile.TemporaryDirectory(prefix='handouter-agent-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='coursecompiler-agent-') as temporary:
         task = Path(temporary).resolve()
         for relative, data in snapshot.items():
             path = task / relative

@@ -36,9 +36,9 @@ if not defined PYTHON_MODE (
 
 :run_setup
 if "%PYTHON_MODE%"=="launcher" (
-  py -%PYTHON_VERSION% setup_handouter.py %*
+  py -%PYTHON_VERSION% setup_coursecompiler.py %*
 ) else (
-  "%PYTHON_EXE%" setup_handouter.py %*
+  "%PYTHON_EXE%" setup_coursecompiler.py %*
 )
 if errorlevel 1 goto :fail
 

@@ -3,8 +3,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from handouter.typora_export import export_typora, typora_markdown
-from handouter.resources import markdown_parser, parse_resources
+from coursecompiler.typora_export import export_typora, typora_markdown
+from coursecompiler.resources import markdown_parser, parse_resources
 
 
 def panel(index):

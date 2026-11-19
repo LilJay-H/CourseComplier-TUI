@@ -6,10 +6,10 @@ import unittest
 from unittest.mock import patch
 import zipfile
 
-from handouter import cli, tui
-from handouter.importers import import_local_asset_zip, inspect_local_asset_zip
-from handouter.product import inspect_input_source
-from handouter.service import BuildResult, build_from_local_asset_zip
+from coursecompiler import cli, tui
+from coursecompiler.importers import import_local_asset_zip, inspect_local_asset_zip
+from coursecompiler.product import inspect_input_source
+from coursecompiler.service import BuildResult, build_from_local_asset_zip
 
 
 class LocalAssetInputTests(unittest.TestCase):
@@ -34,7 +34,7 @@ class LocalAssetInputTests(unittest.TestCase):
     def package(self, manifest, files=None, name="local.zip"):
         path = self.root / name
         with zipfile.ZipFile(path, "w") as archive:
-            archive.writestr("handouter-input.json", json.dumps(manifest, ensure_ascii=False))
+            archive.writestr("coursecompiler-input.json", json.dumps(manifest, ensure_ascii=False))
             for relative, content in (files or {}).items():
                 archive.writestr(relative, content)
         return path
@@ -50,6 +50,34 @@ class LocalAssetInputTests(unittest.TestCase):
             "slides": {"images_dir": "slides/images", "metadata_path": "slides/slides_meta.json"},
         }
 
+    def test_pre_rename_collector_output_is_read_without_a_plugin(self):
+        from coursecompiler_local.assets import inspect
+        from coursecompiler.stage_cache import asset_fingerprint
+
+        package = self.root / "collector.zip"
+        manifest = {"schema_version": 1, "lecture": {"course_title": "已采集课程"},
+                    "transcript": {"path": "transcript.txt"}}
+        with zipfile.ZipFile(package, "w") as archive:
+            archive.writestr("handouter-input.json", json.dumps(manifest))
+            archive.writestr("transcript.txt", "合成转写")
+        with patch("coursecompiler.external_collector.inspect_browser_export") as plugin:
+            self.assertEqual(inspect_input_source(package).source_kind, "local_asset_package")
+            self.assertEqual(inspect(package).course_title, "已采集课程")
+            self.assertTrue(asset_fingerprint(package))
+            imported = import_local_asset_zip(package, self.root / "imported")
+            self.assertEqual(imported.transcript.read_text(), "合成转写")
+            plugin.assert_not_called()
+
+    def test_two_named_manifests_are_ambiguous_for_all_consumers(self):
+        from coursecompiler_local.assets import inspect
+        from coursecompiler.stage_cache import asset_fingerprint
+
+        package = self.package({"schema_version": 1, "transcript": {"path": "t.txt"}},
+                               {"t.txt": "synthetic", "handouter-input.json": "{}"})
+        for reader in (inspect, inspect_input_source, inspect_local_asset_zip, asset_fingerprint):
+            with self.subTest(reader=reader.__name__), self.assertRaisesRegex(ValueError, "two root manifests"):
+                reader(package)
+
     def test_transcript_package_prepares_workspace_without_asr(self):
         manifest = self.transcript_manifest()
         files = {
@@ -61,7 +89,7 @@ class LocalAssetInputTests(unittest.TestCase):
             "slides/slides_meta.json": json.dumps([{"filename": "slide_001.png", "start_ms": 0}]),
         }
         archive = self.package(manifest, files)
-        with patch("handouter.service.build_from_audio") as audio, patch("handouter.service.build_from_media") as media:
+        with patch("coursecompiler.service.build_from_audio") as audio, patch("coursecompiler.service.build_from_media") as media:
             result = build_from_local_asset_zip(self.root / "out", lecture_id="portable-lecture",
                 course_title="Portable Course", asset_zip=archive, use_slides_as_source=True)
         audio.assert_not_called()
@@ -72,7 +100,7 @@ class LocalAssetInputTests(unittest.TestCase):
         self.assertEqual((result.workspace / "transcript/transcript.txt").read_text(), "用户提供的转写。")
         self.assertEqual((result.workspace / "audio/source.m4a").read_bytes(), b"synthetic evidence audio")
         self.assertTrue((result.workspace / "slides/images/slide_001.png").is_file())
-        from handouter.agents.manual import selected_files
+        from coursecompiler.agents.manual import selected_files
         self.assertNotIn("audio/source.m4a", selected_files(result.workspace,
             json.loads((result.workspace / "handoff/sources.json").read_text())))
 
@@ -84,7 +112,7 @@ class LocalAssetInputTests(unittest.TestCase):
         def consume(*_args, **kwargs):
             captured["audio"] = Path(kwargs["audio"]).read_bytes()
             return sentinel
-        with patch("handouter.service.build_from_audio", side_effect=consume) as build:
+        with patch("coursecompiler.service.build_from_audio", side_effect=consume) as build:
             result = build_from_local_asset_zip(self.root / "out", lecture_id="audio-lecture",
                 course_title="Audio", asset_zip=archive)
         self.assertIs(result, sentinel)
@@ -94,7 +122,7 @@ class LocalAssetInputTests(unittest.TestCase):
     def test_manifest_identity_and_tui_direct_audio_mapping(self):
         archive = self.package({"schema_version": 1, "lecture": {"course_title": "Course"},
             "transcript": {"path": "text.txt"}}, {"text.txt": "text"})
-        with patch("handouter.external_collector.inspect_browser_export", side_effect=AssertionError("standard package requires no plugin")):
+        with patch("coursecompiler.external_collector.inspect_browser_export", side_effect=AssertionError("standard package requires no plugin")):
             identity = inspect_input_source(archive)
         self.assertEqual(identity.source_kind, "local_asset_package")
         self.assertEqual(identity.course_title, "Course")
@@ -114,7 +142,7 @@ class LocalAssetInputTests(unittest.TestCase):
             output.writestr("nested/handouter-input.json", json.dumps({"schema_version": 1}))
             output.writestr("course_info.json", json.dumps({"courseName": "Zhiyun compatible"}))
             output.writestr("private/source.json", json.dumps({"pageUrl": "https://example.invalid/?course_id=1&sub_id=2"}))
-        with patch("handouter.external_collector.inspect_browser_export", return_value={
+        with patch("coursecompiler.external_collector.inspect_browser_export", return_value={
                 "course_title": "External compatible", "lecture_date": None, "source_sha256": "a" * 64}):
             identity = inspect_input_source(archive)
         self.assertEqual(identity.source_kind, "zhiyun_asset_zip")
@@ -126,11 +154,11 @@ class LocalAssetInputTests(unittest.TestCase):
         args = parser.parse_args(["run", "--transcript", str(transcript), "--output-dir",
             str(self.root / "out"),
             "--course-title", "Direct", "--lecture-id", "direct-1"])
-        with patch("handouter.cli.prepare_lecture") as prepare, \
-             patch("handouter.cli._require_delivery"), \
-             patch("handouter.cli._apply_agent_interaction", return_value=({"agent_was_run": False}, 0)), \
-             patch("handouter.cli._prepare_payload", return_value={}), \
-             patch("handouter.organization.find_workspace", return_value=None):
+        with patch("coursecompiler.cli.prepare_lecture") as prepare, \
+             patch("coursecompiler.cli._require_delivery"), \
+             patch("coursecompiler.cli._apply_agent_interaction", return_value=({"agent_was_run": False}, 0)), \
+             patch("coursecompiler.cli._prepare_payload", return_value={}), \
+             patch("coursecompiler.organization.find_workspace", return_value=None):
             prepare.return_value = type("Prepared", (), {"workspace": self.root / "workspace"})()
             code = cli._run_product(args)
         self.assertEqual(code, 0)
@@ -143,11 +171,11 @@ class LocalAssetInputTests(unittest.TestCase):
             str(self.root / "out"), "--course-title", "Direct", "--lecture-id", "direct-audio"])
         prepared = type("Prepared", (), {"workspace": self.root / "workspace"})()
         result = BuildResult(prepared, None, None)
-        with patch("handouter.cli.build_from_audio", return_value=result) as build, \
-             patch("handouter.cli._require_delivery"), \
-             patch("handouter.cli._apply_agent_interaction", return_value=({"agent_was_run": False}, 0)), \
-             patch("handouter.cli._build_payload", return_value={}), \
-             patch("handouter.organization.find_workspace", return_value=None):
+        with patch("coursecompiler.cli.build_from_audio", return_value=result) as build, \
+             patch("coursecompiler.cli._require_delivery"), \
+             patch("coursecompiler.cli._apply_agent_interaction", return_value=({"agent_was_run": False}, 0)), \
+             patch("coursecompiler.cli._build_payload", return_value={}), \
+             patch("coursecompiler.organization.find_workspace", return_value=None):
             code = cli._run_product(args)
         self.assertEqual(code, 0)
         self.assertEqual(Path(build.call_args.kwargs["audio"]), audio.resolve())

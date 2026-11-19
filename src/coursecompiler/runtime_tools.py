@@ -54,7 +54,7 @@ def bundled_runtime_dirs() -> tuple[Path, ...]:
 
 
 def find_executable(name: str) -> str | None:
-    """Prefer Handouter's private runtime, then use the user's system PATH."""
+    """Prefer CourseCompiler's private runtime, then use the user's system PATH."""
     filename = _tool_filename(name)
     for directory in bundled_runtime_dirs():
         candidate = directory / filename

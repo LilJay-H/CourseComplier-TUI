@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from handouter.service import prepare_lecture, refresh_handoff
+from coursecompiler.service import prepare_lecture, refresh_handoff
 from _gates import requires_html
 
 
@@ -40,7 +40,7 @@ class OrganizationTests(unittest.TestCase):
             self.prepare('two', lecture_date='2026-02-30')
 
     def test_same_day_collision_and_lookup_are_bound_to_lecture_id(self):
-        from handouter.organization import find_workspace, resolve_workspace
+        from coursecompiler.organization import find_workspace, resolve_workspace
         first = self.prepare('one', lecture_date='2026-09-10')
         second = self.prepare('two', lecture_date='2026-09-10')
         self.assertNotEqual(first.workspace, second.workspace)
@@ -50,7 +50,7 @@ class OrganizationTests(unittest.TestCase):
             self.prepare('one', lecture_date='2026-09-10')
 
     def test_legacy_workspace_is_not_moved(self):
-        from handouter.organization import find_workspace, resolve_workspace
+        from coursecompiler.organization import find_workspace, resolve_workspace
         old = prepare_lecture(self.root / 'out', lecture_id='old', course_title='Old', transcript=self.text)
         before = (old.workspace / 'manifest.json').read_bytes()
         self.assertEqual(find_workspace(self.root / 'out', 'old'), old.workspace)
@@ -58,7 +58,7 @@ class OrganizationTests(unittest.TestCase):
         self.assertEqual((old.workspace / 'manifest.json').read_bytes(), before)
 
     def test_old_v1_package_name_still_resolves_after_new_short_folder_rule(self):
-        from handouter.organization import resolve_workspace, MATERIALS
+        from coursecompiler.organization import resolve_workspace, MATERIALS
         package = self.root / 'out' / '旧课程_2026-09-10'
         workspace = package / MATERIALS / 'legacy-id'
         workspace.mkdir(parents=True)
@@ -69,7 +69,7 @@ class OrganizationTests(unittest.TestCase):
         self.assertEqual(resolve_workspace(package), workspace.resolve())
 
     def test_auto_folder_name_omits_course_when_root_is_course_or_alias(self):
-        from handouter.organization import package_name
+        from coursecompiler.organization import package_name
         course_root = self.root / '计算机组成'
         alias_root = self.root / '计组'
         other_root = self.root / '课程'
@@ -86,7 +86,7 @@ class OrganizationTests(unittest.TestCase):
 
     def test_export_date_is_not_lecture_date(self):
         import zipfile
-        from handouter.product import inspect_asset_zip
+        from coursecompiler.product import inspect_asset_zip
         asset = self.root / 'asset.zip'
         with zipfile.ZipFile(asset, 'w') as archive:
             archive.writestr('course_info.json', json.dumps({'courseName': '课', 'exportDate': '2026-09-17'}))
@@ -96,7 +96,7 @@ class OrganizationTests(unittest.TestCase):
         self.assertEqual(inspect_asset_zip(asset).lecture_date, '2026-09-10')
 
     def test_failed_empty_package_does_not_block_corrected_date(self):
-        with patch('handouter.service.create_workspace', side_effect=ValueError('synthetic invalid input')):
+        with patch('coursecompiler.service.create_workspace', side_effect=ValueError('synthetic invalid input')):
             with self.assertRaises(ValueError):
                 self.prepare(lecture_date='2026-09-10')
         result = self.prepare(lecture_date='2026-09-11')
@@ -105,10 +105,10 @@ class OrganizationTests(unittest.TestCase):
     def test_cli_prepare_uses_saved_course_output_when_no_explicit_root(self):
         import contextlib
         import io
-        from handouter import cli
+        from coursecompiler import cli
         course_root = self.root / 'course-root'
         output = io.StringIO()
-        with patch('handouter.settings.resolve_output_directory', return_value=str(course_root)) as resolve, \
+        with patch('coursecompiler.settings.resolve_output_directory', return_value=str(course_root)) as resolve, \
              contextlib.redirect_stdout(output):
             code = cli.main(['prepare', '--lecture-id', 'course-dir', '--course-title', '课程 / A',
                              '--lecture-date', '2026-09-10', '--transcript', str(self.text),
@@ -127,9 +127,9 @@ class OrganizationTests(unittest.TestCase):
         import contextlib
         import io
         import shutil
-        from handouter import cli
-        from handouter.tasks import plan_task
-        from handouter.html_export import export_html
+        from coursecompiler import cli
+        from coursecompiler.tasks import plan_task
+        from coursecompiler.html_export import export_html
         images = self.root / 'images'
         images.mkdir()
         (images / 'one.png').write_bytes(base64.b64decode(
@@ -141,7 +141,7 @@ class OrganizationTests(unittest.TestCase):
             self.assertEqual(code, 0, output.getvalue())
             return json.loads(output.getvalue())
         defaults = {'input_dir': str(self.root / 'input'), 'output_dir': str(self.root / 'out'), 'configured': True}
-        with patch('handouter.settings.load_directory_settings', return_value=defaults):
+        with patch('coursecompiler.settings.load_directory_settings', return_value=defaults):
             created = command(['prepare', '--lecture-id', 'cli', '--course-title', '中文课',
                 '--lecture-date', '2026-09-10', '--transcript', str(self.text), '--slides-dir', str(images), '--embed-slides'])
         workspace = Path(created['workspace'])
@@ -156,7 +156,7 @@ class OrganizationTests(unittest.TestCase):
         public_image = package / '成果/slides/images/one.png'
         public_image.unlink()
         self.assertEqual(plan_task(workspace).action, 'publish_only')
-        with patch('handouter.cli.run_cli_agent', side_effect=AssertionError('must not run')):
+        with patch('coursecompiler.cli.run_cli_agent', side_effect=AssertionError('must not run')):
             command(['continue', str(package), '--agent', 'codex'])
         self.assertTrue(public_image.is_file())
         bundle = command(['bundle', str(package)])
@@ -170,7 +170,7 @@ class OrganizationTests(unittest.TestCase):
         self.assertIn('data:image/png', exported[0].read_text())
 
     def test_collision_normalization_and_linked_destination_refuse_overwrite(self):
-        from handouter.organization import course_name
+        from coursecompiler.organization import course_name
         self.assertEqual(course_name('e\u0301', None), course_name('é', None))
         self.assertNotIn('/', course_name('CON/考试:*?', None))
         first = self.prepare('first', lecture_date='2026-09-10')
@@ -180,7 +180,7 @@ class OrganizationTests(unittest.TestCase):
         (package / '成果').rmdir()
         (package / '成果').symlink_to(outside, target_is_directory=True)
         (first.workspace / first.handoff.output_path).write_text('# 合成稿\n')
-        from handouter.delivery import publish_deliverables
+        from coursecompiler.delivery import publish_deliverables
         self.assertEqual(publish_deliverables(first.workspace)['status'], 'failed')
         self.assertEqual(list(outside.iterdir()), [])
 
@@ -194,7 +194,7 @@ class OrganizationTests(unittest.TestCase):
         self.assertTrue(all(path.is_dir() for path in packages))
 
     def test_cleanup_refuses_a_unique_cached_material_even_via_inner_path(self):
-        from handouter.tasks import clean_cache
+        from coursecompiler.tasks import clean_cache
         result = self.prepare()
         cache = result.workspace.parent.parent / '中间产物_可清理'
         entry = 'one/' + 'a' * 64
@@ -207,10 +207,10 @@ class OrganizationTests(unittest.TestCase):
         self.assertTrue(unique.is_file())
 
     def test_successful_stages_are_in_intermediate_and_cleanup_preserves_evidence(self):
-        from handouter.service import build_from_media
-        from handouter.asr import ASRResult
-        from handouter.media import AudioExtractResult
-        from handouter.tasks import inspect_cache, clean_cache
+        from coursecompiler.service import build_from_media
+        from coursecompiler.asr import ASRResult
+        from coursecompiler.media import AudioExtractResult
+        from coursecompiler.tasks import inspect_cache, clean_cache
         media = self.root / 'synthetic.mp4'
         media.write_bytes(b'synthetic input')
         def extract(source, output):
@@ -223,8 +223,8 @@ class OrganizationTests(unittest.TestCase):
             (output / 'segments.json').write_text('[]')
             (output / 'transcript.txt').write_text('Synthetic 中文课程。', encoding='utf-8')
             return ASRResult(output, output / 'raw.json', output / 'segments.json', output / 'transcript.txt', 0, 'unavailable', 'cpu', 0.1)
-        with patch('handouter.doctor.require_features'), patch('handouter.service.extract_audio', side_effect=extract), \
-             patch('handouter.service.transcribe_sensevoice', side_effect=transcribe):
+        with patch('coursecompiler.doctor.require_features'), patch('coursecompiler.service.extract_audio', side_effect=extract), \
+             patch('coursecompiler.service.transcribe_sensevoice', side_effect=transcribe):
             result = build_from_media(self.root / 'out', lecture_id='media', course_title='课程',
                 media_source=media, organized=True, lecture_date='2026-09-10', use_slides_as_source=False)
         workspace = result.prepare.workspace
@@ -237,7 +237,7 @@ class OrganizationTests(unittest.TestCase):
         self.assertEqual(before, {p.relative_to(workspace): p.read_bytes() for p in workspace.rglob('*') if p.is_file()})
 
     def test_published_history_is_in_agent_protected_inventory(self):
-        from handouter.agents.runner import _formal_inventory
+        from coursecompiler.agents.runner import _formal_inventory
         result = self.prepare()
         historical = result.workspace.parent.parent / '成果/old.html'
         historical.write_text('old result')
@@ -246,8 +246,8 @@ class OrganizationTests(unittest.TestCase):
         self.assertNotEqual(before, _formal_inventory(result.workspace))
 
     def test_tui_results_find_course_named_upload_directories(self):
-        from handouter.agents.web import create_web_handoff
-        from handouter.tui import _result_rows
+        from coursecompiler.agents.web import create_web_handoff
+        from coursecompiler.tui import _result_rows
         result = self.prepare(lecture_date='2026-09-10')
         web = create_web_handoff(result.workspace)
         self.assertTrue(any(str(web.directory) in row for row in _result_rows(result.workspace)))

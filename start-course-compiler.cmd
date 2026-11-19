@@ -1,2 +1,2 @@
 @echo off
-call "%~dp0start-handouter.cmd" %*
+call "%~dp0start-coursecompiler.cmd" %*

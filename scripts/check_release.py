@@ -12,7 +12,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 CORE = (
     'test_build_backend', 'test_tui_workflow', 'test_tui_directories',
-    'test_local_asset_input', 'test_media_asr_alignment', 'test_setup_handouter',
+    'test_local_asset_input', 'test_media_asr_alignment', 'test_setup_coursecompiler',
     'test_local_agent_workflow', 'test_local_editorial', 'test_split_distribution', 'test_external_collection',
 )
 FULL = CORE + ('test_handoff_workspace', 'test_agent_interaction',
@@ -23,7 +23,7 @@ FULL = CORE + ('test_handoff_workspace', 'test_agent_interaction',
 def run_regressions(profile, exhaustive=False):
     sys.path[:0] = [str(ROOT / 'tests'), str(ROOT / 'src'), str(ROOT)]
     os.environ['HANDOUTER_SLOW_TESTS'] = '1' if profile == 'full' else '0'
-    from handouter.doctor import require_features
+    from coursecompiler.doctor import require_features
     require_features(['core', 'pdf', 'html', 'tui'])
     names = tuple(p.stem for p in sorted((ROOT / 'tests').glob('test_*.py'))) if exhaustive else (FULL if profile == 'full' else CORE)
     suite = unittest.defaultTestLoader.loadTestsFromNames(names)
@@ -47,12 +47,12 @@ def run_regressions(profile, exhaustive=False):
 
 def installed_smoke(profile: str) -> int:
     # Invoked with -I from a clean environment. Do not add the checkout to sys.path.
-    import handouter
-    from handouter.doctor import require_features
-    from handouter.service import prepare_lecture
-    from handouter.agents.web import create_web_handoff
-    from handouter.validation import validate_note_output
-    if Path(handouter.__file__).resolve().is_relative_to(ROOT / 'src'):
+    import coursecompiler
+    from coursecompiler.doctor import require_features
+    from coursecompiler.service import prepare_lecture
+    from coursecompiler.agents.web import create_web_handoff
+    from coursecompiler.validation import validate_note_output
+    if Path(coursecompiler.__file__).resolve().is_relative_to(ROOT / 'src'):
         raise RuntimeError('Installed smoke accidentally imported the source checkout')
     require_features(['core', 'pdf', *(['html'] if profile == 'full' else [])])
     with tempfile.TemporaryDirectory() as td:
@@ -75,12 +75,12 @@ def installed_smoke(profile: str) -> int:
         note.write_text('# 合成讲义\n\n$\\frac{1}{\\sqrt{x}}$\n\n![图](../slides/images/' + image.name + ')', encoding='utf-8')
         assert validate_note_output(workspace).ok
         if profile == 'full':
-            from handouter.html_export import export_html
+            from coursecompiler.html_export import export_html
             html = export_html(note)[0].read_text(encoding='utf-8')
             assert '<math' in html and 'data:image/png;base64,' in html
             published = workspace.parent.parent / '成果/notes' / note.name
             assert published.read_bytes() == note.read_bytes()
-    print(json.dumps({'installed_smoke': 'passed', 'profile': profile, 'module': handouter.__file__,
+    print(json.dumps({'installed_smoke': 'passed', 'profile': profile, 'module': coursecompiler.__file__,
                       'real_model_run': False}, ensure_ascii=False))
     return 0
 

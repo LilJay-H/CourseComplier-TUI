@@ -89,14 +89,14 @@ AI 返回 Markdown 后，可以再导入 Course Compiler，继续校验和生成
 
 # 输出结果
 
-首次打开 TUI 时，使用 **DIRECTORIES** 确认或修改输入/输出根目录并保存。默认是系统实际桌面的 `Handouter/输入`、`Handouter/输出`；Windows 支持系统重定向的桌面。设置跨启动目录保存，仍可从任意位置拖入 ZIP。
+首次打开 TUI 时，使用 **DIRECTORIES** 确认或修改输入/输出根目录并保存。默认是系统实际桌面的 `CourseCompiler/输入`、`CourseCompiler/输出`；Windows 支持系统重定向的桌面。设置跨启动目录保存，仍可从任意位置拖入 ZIP。
 
 课程名称从 ZIP 读取，也可修改。**Lecture Date** 填真实授课日期（`YYYY-MM-DD`）；新版智云导出脚本会从讲次 `sub_title` / `lectureDate` 等明确元数据提取并写入 `course_info.json.lectureDate`。缺失时仍明确标记日期待确认，不使用 `exportDate`、导出日或生成日代替。
 
 新任务布局如下，同课同日不同讲次会加稳定 ID 摘要消歧：
 
 ```text
-桌面/Handouter/输出/课程名称-09-17/
+桌面/CourseCompiler/输出/课程名称-09-17/
 ├── 成果/
 │   ├── notes/               # Markdown / 离线 HTML
 │   └── slides/images/       # Markdown 实际引用的图片
@@ -116,24 +116,24 @@ Course Compiler 的结果采用版本化文件名，例如：
 
 分享 Markdown 时请一起复制整个“成果”文件夹；其中的图片相对位置保持不变。内嵌完成的 HTML 可单文件分享。网页导入、CLI Agent 或 HTML 导出后会发布成品副本；失败保留内部原稿，并在结果页显示发布状态。
 
-CLI 可用 `handouter directories` 查看目录设置。默认输出目录可以单独保存：`handouter directories --output-dir <绝对路径>`；某门课可设置专用输出根目录：`handouter directories --course-title "课程名" --course-output-dir <绝对路径>`，用 `--clear-course-output` 恢复继承默认目录。还可以登记课程别名，例如 `handouter directories --course-title "计算机组成" --course-alias "计组"`、`handouter directories --course-title "高级数据结构" --course-alias "ADS"`。别名只用于识别同一门课，内部仍保存正式课程名。
+CLI 可用 `coursecompiler directories` 查看目录设置。默认输出目录可以单独保存：`coursecompiler directories --output-dir <绝对路径>`；某门课可设置专用输出根目录：`coursecompiler directories --course-title "课程名" --course-output-dir <绝对路径>`，用 `--clear-course-output` 恢复继承默认目录。还可以登记课程别名，例如 `coursecompiler directories --course-title "计算机组成" --course-alias "计组"`、`coursecompiler directories --course-title "高级数据结构" --course-alias "ADS"`。别名只用于识别同一门课，内部仍保存正式课程名。
 
-课程文件夹名称可按课程设置为 `auto / always / never`：`handouter directories --course-title "计算机组成" --course-folder-name auto`。`auto` 是默认行为：如果实际输出根目录最后一级已经叫“计算机组成”或任一别名（例如 `/课程/计组`），讲次只创建 `09-17/`；否则创建 `计算机组成-09-17/`。`always` 永远带课程名，`never` 永远只用 `MM-DD`。因此可一次配置：`handouter directories --course-title "计算机组成" --course-alias "计组" --course-output-dir "/课程/计组" --course-folder-name auto`。
+课程文件夹名称可按课程设置为 `auto / always / never`：`coursecompiler directories --course-title "计算机组成" --course-folder-name auto`。`auto` 是默认行为：如果实际输出根目录最后一级已经叫“计算机组成”或任一别名（例如 `/课程/计组`），讲次只创建 `09-17/`；否则创建 `计算机组成-09-17/`。`always` 永远带课程名，`never` 永远只用 `MM-DD`。因此可一次配置：`coursecompiler directories --course-title "计算机组成" --course-alias "计组" --course-output-dir "/课程/计组" --course-folder-name auto`。
 
 新任务的输出根目录优先级仍为“本次显式 `--output-dir` > 课程专用目录 > 默认输出目录”。TUI 的 `DIRECTORIES` 同时支持 Default Output、当前课程 Course Output、Aliases 和 Folder Name。新任务可传 `--lecture-date 2026-09-17`；旧脚本若必须维持原布局，可显式加 `--legacy-layout`。旧工作区不会自动迁移；打开外层课程文件夹即可续作。
 
 Course Compiler 也可以直接使用其他网站下载到本地的材料，不要求先经过智云抓取：
 
 ```bash
-handouter run --audio lecture.m4a --course-title "课程名" --lecture-id lecture-01
-handouter run --media lecture.mp4 --course-title "课程名" --lecture-id lecture-01
-handouter run --transcript transcript.txt --course-title "课程名" --lecture-id lecture-01
-handouter run --asset portable-assets.zip
+coursecompiler run --audio lecture.m4a --course-title "课程名" --lecture-id lecture-01
+coursecompiler run --media lecture.mp4 --course-title "课程名" --lecture-id lecture-01
+coursecompiler run --transcript transcript.txt --course-title "课程名" --lecture-id lecture-01
+coursecompiler run --asset portable-assets.zip
 ```
 
-TUI 的 `Source File` 同样接受智云 ZIP、站点无关资产 ZIP、本地音频、视频和 UTF-8 TXT。多资产 ZIP 的 `handouter-input.json`、PPT 时间字段、扩展名和安全限制见 [本地资产输入协议](LOCAL_ASSET_INPUT.md)。
+TUI 的 `Source File` 同样接受智云 ZIP、站点无关资产 ZIP、本地音频、视频和 UTF-8 TXT。多资产 ZIP 的 `coursecompiler-input.json`（兼容旧版 `handouter-input.json`）、PPT 时间字段、扩展名和安全限制见 [本地资产输入协议](LOCAL_ASSET_INPUT.md)。
 
-清理时先 `handouter cache-status <课程文件夹>`，再用 `cache-clean <课程文件夹> --entry <列出的条目>` 预览，确认后加 `--confirm`。尚未保存到正式资料的唯一文件拒绝清理。不要手动删除“资料与交接”。细节见 [输出组织](OUTPUT_ORGANIZATION.md)。
+清理时先 `coursecompiler cache-status <课程文件夹>`，再用 `cache-clean <课程文件夹> --entry <列出的条目>` 预览，确认后加 `--confirm`。尚未保存到正式资料的唯一文件拒绝清理。不要手动删除“资料与交接”。细节见 [输出组织](OUTPUT_ORGANIZATION.md)。
 
 如果你只是修改讲义模式、PPT 策略或写作规则，Course Compiler 可以复用已经完成的课程材料，不重新执行整段音频转写。
 
@@ -149,7 +149,7 @@ Course Compiler 不要求所有任务都从课程回放开始。
 - 在已有 PPT 的基础上补图；
 - 导入网页 AI 返回的讲义；
 - 生成离线 HTML 阅读版；
-- 如需在 Typora 中查看 Course Compiler 的并排/半宽课件布局，可另导出 Typora 兼容阅读副本：`handouter export-typora <note.md>`。
+- 如需在 Typora 中查看 Course Compiler 的并排/半宽课件布局，可另导出 Typora 兼容阅读副本：`coursecompiler export-typora <note.md>`。
 
 如果只有讲义、没有原始课程转写，Course Compiler 会明确保留这个来源限制，不会把它当作真正的课堂逐字证据。
 
@@ -174,7 +174,7 @@ Course Compiler 采用 local-first 设计，但不同交付方式的隐私边界
 
 # 命令行用户
 
-新版本安装后使用 `course-compiler`；`handouter` 继续进入同一个 CLI main，没有额外弃用输出，不污染 JSON/stdout。下面说明中的包名、启动器和目录名继续有效，不会自动改名或搬迁。
+新版本使用 `course-compiler` 或 `coursecompiler`；原 `handouter` 命令已移除。已有目录设置和采集插件设置可从旧位置读取，材料和旧成果不会自动迁移。
 
 例如：
 
@@ -189,7 +189,7 @@ course-compiler run \
 
 ```bash
 course-compiler --help
-handouter --help  # 兼容入口
+coursecompiler --help  # 兼容入口
 ```
 
 检查安装环境：
@@ -198,4 +198,4 @@ handouter --help  # 兼容入口
 course-compiler doctor
 ```
 
-CLI 适合自动化和高级用户；普通用户建议直接使用 `start-handouter` 启动 TUI。
+CLI 适合自动化和高级用户；普通用户建议直接使用 `start-coursecompiler` 启动 TUI。
