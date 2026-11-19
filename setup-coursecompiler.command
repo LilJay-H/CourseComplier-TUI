@@ -62,7 +62,7 @@ if [[ ! -x runtime/ffmpeg/ffmpeg || ! -x runtime/ffmpeg/ffprobe ]]; then
 fi
 
 echo "Using Python: $PYTHON"
-if "$PYTHON" setup_handouter.py "$@"; then
+if "$PYTHON" setup_coursecompiler.py "$@"; then
   :
 else
   status=$?

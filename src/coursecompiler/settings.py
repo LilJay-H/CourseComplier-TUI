@@ -32,7 +32,7 @@ def directory_settings_path() -> Path:
             base = home / '.config'
     if not base.is_absolute():
         raise ValueError('应用配置目录必须是绝对路径')
-    return base / 'Handouter' / 'directories.json'
+    return base / 'CourseCompiler' / 'directories.json'
 
 
 def _check_config_path(path: Path) -> None:
@@ -45,6 +45,16 @@ def _check_config_path(path: Path) -> None:
             raise ValueError('目录设置路径不能是符号链接或重解析点')
     if path.exists() and not path.is_file():
         raise ValueError('目录设置必须是普通文件')
+
+
+def existing_configuration_path(path: Path) -> Path:
+    """Prefer current configuration; read the prior location without moving it."""
+    _check_config_path(path)
+    if path.exists() or path.parent.name != 'CourseCompiler':
+        return path
+    legacy = path.parent.parent / 'Handouter' / path.name
+    _check_config_path(legacy)
+    return legacy if legacy.exists() else path
 
 
 def _validated_path(value: str | Path, *, label: str) -> Path:
@@ -184,15 +194,14 @@ def _validate_course_registry(outputs: dict, aliases: dict, modes: dict) -> None
 
 
 def _defaults() -> dict:
-    root = desktop_directory() / 'Handouter'
+    root = desktop_directory() / 'CourseCompiler'
     return {'input_dir': str(root / '输入'), 'output_dir': str(root / '输出'),
             'course_output_dirs': {}, 'course_aliases': {}, 'course_folder_modes': {},
             'configured': False}
 
 
 def _read_settings() -> dict:
-    path = directory_settings_path()
-    _check_config_path(path)
+    path = existing_configuration_path(directory_settings_path())
     if not path.exists():
         return _defaults()
     try:

@@ -2,9 +2,9 @@
 
 `python scripts/check_release.py --profile full` 运行明确的本地测试模块。缺依赖、测试收集为空或意外 skip 均失败。平台跳过和 core 中的慢测试跳过会明确记录，full 不跳过慢测试。完整保留回归可加 `--exhaustive`；没有 cloud profile。
 
-`python -c "import handouter_build as b; print(b.build_wheel('dist')); print(b.build_sdist('dist'))"` 构建 wheel/sdist，不需要安装构建 backend。两者以 release-files.json 为白名单。源码包包括规则、安装器、文档、测试和构建入口，但不包含站点采集器或浏览器脚本，可脱离两个 checkout 继续开发和重建。
+`python -c "import coursecompiler_build as b; print(b.build_wheel('dist')); print(b.build_sdist('dist'))"` 构建 wheel/sdist，不需要安装构建 backend。两者以 release-files.json 为白名单。源码包包括规则、安装器、文档、测试和构建入口，但不包含站点采集器或浏览器脚本，可脱离两个 checkout 继续开发和重建。
 
-验证安装时创建源码目录外的新 venv，以绝对路径安装 wheel 的 `[html]` extra，然后在临时空目录执行新环境的 `course-compiler --help`、`handouter --help` 和：
+验证安装时创建源码目录外的新 venv，以绝对路径安装 wheel 的 `[html]` extra，然后在临时空目录执行新环境的 `course-compiler --help`、`coursecompiler --help` 和：
 
 ```text
 <新环境的 python> -X utf8 -I <仓库>/scripts/check_release.py --installed-smoke --profile full

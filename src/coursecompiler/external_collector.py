@@ -19,7 +19,7 @@ import threading
 import time
 
 from .platform_support import start_task_process, terminate_process_tree
-from .settings import _check_config_path, directory_settings_path
+from .settings import _check_config_path, directory_settings_path, existing_configuration_path
 from .credentials import scan_credentials
 
 MAX_FRAME = 16 * 1024
@@ -85,7 +85,7 @@ def _validated(value: object) -> dict:
 
 
 def load_configuration() -> dict:
-    path = configuration_path()
+    path = existing_configuration_path(configuration_path())
     _check_config_path(path)
     if not path.exists():
         raise ValueError("COLLECTOR_NOT_CONFIGURED: 浏览器 ZIP 需要独立采集插件；先运行 course-compiler collector-configure --help")
@@ -99,7 +99,7 @@ def load_configuration() -> dict:
 
 
 def configured_exporter_script() -> Path | None:
-    path = configuration_path()
+    path = existing_configuration_path(configuration_path())
     if not path.exists():
         return None
     try:
@@ -320,7 +320,7 @@ def convert_browser_export(source: str | Path, output: str | Path, *, allowed_me
         "output_path": str(target)}, progress=progress, timeout=6 * 60 * 60)
     if result.get("output_path") != str(target):
         raise ValueError("COLLECTOR_PROTOCOL: 插件输出路径无效")
-    from handouter_local.assets import inspect
+    from coursecompiler_local.assets import inspect
     inspected = inspect(target)
     if inspected.source_kind != "asset_zip":
         raise ValueError("COLLECTOR_OUTPUT_INVALID: 标准包未通过完整预检")

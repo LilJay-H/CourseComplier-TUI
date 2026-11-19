@@ -75,13 +75,13 @@ def inspect_input_source(source: str | Path, *, source_kind: str | None = None) 
     path = candidate.resolve()
     if not path.is_file():
         raise FileNotFoundError(f"输入不存在或不是普通文件: {path}")
-    from .importers import (LOCAL_ASSET_MANIFEST, LOCAL_AUDIO_SUFFIXES, LOCAL_MEDIA_SUFFIXES,
+    from .importers import (standard_manifest_name, LOCAL_AUDIO_SUFFIXES, LOCAL_MEDIA_SUFFIXES,
                             LOCAL_TRANSCRIPT_SUFFIXES, inspect_local_asset_zip)
     suffix = path.suffix.lower()
     kind = source_kind
     if kind is None and suffix == ".zip":
         with zipfile.ZipFile(path) as archive:
-            kind = "local_asset_package" if LOCAL_ASSET_MANIFEST in archive.namelist() else "zhiyun_asset_zip"
+            kind = "local_asset_package" if standard_manifest_name(archive.namelist()) else "zhiyun_asset_zip"
     elif kind is None and suffix in LOCAL_AUDIO_SUFFIXES:
         kind = "local_audio"
     elif kind is None and suffix in LOCAL_MEDIA_SUFFIXES:

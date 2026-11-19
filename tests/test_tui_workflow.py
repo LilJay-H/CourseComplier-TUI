@@ -9,8 +9,8 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-from handouter import tui
-from handouter.service import prepare_lecture
+from coursecompiler import tui
+from coursecompiler.service import prepare_lecture
 
 
 class TUIWorkflowTests(unittest.TestCase):
@@ -29,7 +29,7 @@ class TUIWorkflowTests(unittest.TestCase):
     def planner(self, action):
         plan = SimpleNamespace(action=action, completed={'deep': 'notes/deep-001.md'},
                                pending={}, errors=(), warnings=(), task_id='synthetic-task')
-        return patch.dict(sys.modules, {'handouter.tasks': SimpleNamespace(plan_task=lambda *args, **kwargs: plan)})
+        return patch.dict(sys.modules, {'coursecompiler.tasks': SimpleNamespace(plan_task=lambda *args, **kwargs: plan)})
 
     def test_completed_run_shows_results_without_agent_rerun(self):
         with self.planner('complete'):
@@ -194,7 +194,7 @@ class TUIWorkflowTests(unittest.TestCase):
                 run.assert_not_called()
 
     def test_import_button_binds_explicit_mode_and_current_task_id(self):
-        from handouter.tasks import plan_task
+        from coursecompiler.tasks import plan_task
         task_id = plan_task(self.workspace).task_id
         returned = self.root / 'returned.md'
         returned.write_text('# 合成返回稿')
@@ -219,7 +219,7 @@ class TUIWorkflowTests(unittest.TestCase):
         self.assertEqual(tui._load_preferences(storage), {})
 
     def test_unchanged_submitted_revision_continues_without_prompt_refresh(self):
-        from handouter.service import refresh_handoff
+        from coursecompiler.service import refresh_handoff
         note = self.root / 'submitted.md'
         note.write_text('# 已有讲义\n\n有条件的结论。')
         refresh_handoff(self.workspace, source_note=note, modes=['deep'])
@@ -234,7 +234,7 @@ class TUIWorkflowTests(unittest.TestCase):
         self.assertEqual(tui._task_cli_args(cfg, prompt_only=False)[0][0], 'prompt')
 
     def test_missing_note_can_continue_explicit_workspace_snapshot(self):
-        from handouter.service import refresh_handoff
+        from coursecompiler.service import refresh_handoff
         note = self.root / 'submitted.md'
         note.write_text('# 已提交的合成讲义')
         refresh_handoff(self.workspace, source_note=note, modes=['deep'])
@@ -250,7 +250,7 @@ class TUIWorkflowTests(unittest.TestCase):
         self.assertIn('已提交的合成讲义', sources['revision']['text'])
 
     def test_revision_action_change_remains_explicit_and_illustrate_is_single_mode(self):
-        from handouter.service import refresh_handoff
+        from coursecompiler.service import refresh_handoff
         note = self.root / 'submitted.md'
         note.write_text('# 已提交的合成讲义')
         refresh_handoff(self.workspace, source_note=note, modes=['deep'])

@@ -59,7 +59,7 @@ def preflight_build(root: Path, *, lecture_id: str, course_title: str, media: bo
     not a prediction of remote media length, model downloads or peak ASR use.
     """
     _progress(progress, '材料预检', 0, '检查课件、输出目录与任务配置')
-    with tempfile.TemporaryDirectory(prefix='.handouter-preflight-', dir=root) as temporary:
+    with tempfile.TemporaryDirectory(prefix='.coursecompiler-preflight-', dir=root) as temporary:
         scratch = Path(temporary)
         transcript = scratch / 'synthetic.txt'
         transcript.write_text('Synthetic preflight 中文材料检查。', encoding='utf-8')
@@ -358,7 +358,7 @@ def build_from_asset_zip(
     """External collection -> complete standard-package check -> local preparation."""
     from .external_collector import convert_browser_export, inspect_browser_export
     details = inspect_browser_export(asset_zip)
-    with tempfile.TemporaryDirectory(prefix="handouter-collection-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="coursecompiler-collection-") as temporary:
         standard = Path(temporary) / "standard.zip"
         checked = convert_browser_export(asset_zip, standard, allowed_media_hosts=allowed_media_hosts or [],
             expected_source_sha256=collector_source_sha256 or details["source_sha256"],
@@ -401,11 +401,11 @@ def build_from_local_asset_zip(
     """Site-neutral local asset ZIP -> existing preparation/ASR pipelines."""
     from .stage_cache import asset_fingerprint
     identity = input_fingerprint or asset_fingerprint(asset_zip)
-    with tempfile.TemporaryDirectory(prefix="handouter-local-assets-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="coursecompiler-local-assets-") as temporary:
         if checked_asset is None:
             package = import_local_asset_zip(asset_zip, Path(temporary) / "input")
         else:
-            from handouter_local.assets import extract
+            from coursecompiler_local.assets import extract
             from .importers import LocalAssetPackage
             if checked_asset.source != Path(asset_zip).resolve():
                 raise ValueError("预检标准包与所选资源不匹配")

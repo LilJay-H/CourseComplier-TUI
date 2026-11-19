@@ -16,13 +16,13 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from handouter import cli
-from handouter.agents.base import AgentAvailability
-from handouter.agents.manual import _publish_exclusive_file, create_manual_bundle
-from handouter.agents.runner import run_cli_agent
-from handouter.agents import claude, codex
-from handouter.service import prepare_lecture
-from handouter.skill_plan import plan_modules
+from coursecompiler import cli
+from coursecompiler.agents.base import AgentAvailability
+from coursecompiler.agents.manual import _publish_exclusive_file, create_manual_bundle
+from coursecompiler.agents.runner import run_cli_agent
+from coursecompiler.agents import claude, codex
+from coursecompiler.service import prepare_lecture
+from coursecompiler.skill_plan import plan_modules
 
 
 class AgentInteractionTests(unittest.TestCase):
@@ -123,7 +123,7 @@ class AgentInteractionTests(unittest.TestCase):
         self.assertIn("handoff/skill/references/modes/deep.md", before["skill"]["modules"])
         self.assertNotIn("handoff/skill/references/modes/full.md", before["skill"]["modules"])
 
-        from handouter.service import refresh_handoff
+        from coursecompiler.service import refresh_handoff
 
         refreshed = refresh_handoff(
             self.workspace,
@@ -140,10 +140,10 @@ class AgentInteractionTests(unittest.TestCase):
         self.assertTrue(any((self.workspace / "handoff" / "history").glob("task-*-skill/references/modes/deep.md")))
 
     def test_manual_bundle_falls_back_when_hard_links_are_unavailable(self):
-        from handouter.agents import manual
+        from coursecompiler.agents import manual
 
         output = self.workspace / "handoff" / "portable-fallback.zip"
-        with patch("handouter.agents.manual.os.link", side_effect=OSError("hard links unavailable")):
+        with patch("coursecompiler.agents.manual.os.link", side_effect=OSError("hard links unavailable")):
             result = manual.create_manual_bundle(self.workspace, output=output)
         self.assertEqual(result.bundle, output.resolve())
         self.assertTrue(result.bundle.is_file())
@@ -158,7 +158,7 @@ class AgentInteractionTests(unittest.TestCase):
             Path(target).write_bytes(existing)
             raise OSError("hard links unavailable")
 
-        with patch("handouter.agents.manual.os.link", side_effect=unavailable_link):
+        with patch("coursecompiler.agents.manual.os.link", side_effect=unavailable_link):
             with self.assertRaises(FileExistsError):
                 create_manual_bundle(self.workspace, output=output)
         self.assertEqual(output.read_bytes(), existing)
@@ -173,8 +173,8 @@ class AgentInteractionTests(unittest.TestCase):
             target.write(b"partial")
             raise OSError("disk write failed")
 
-        with patch("handouter.agents.manual.os.link", side_effect=OSError("no hard links")), \
-             patch("handouter.agents.manual.shutil.copyfileobj", side_effect=broken_copy):
+        with patch("coursecompiler.agents.manual.os.link", side_effect=OSError("no hard links")), \
+             patch("coursecompiler.agents.manual.shutil.copyfileobj", side_effect=broken_copy):
             with self.assertRaisesRegex(OSError, "disk write failed"):
                 _publish_exclusive_file(source, output)
         self.assertFalse(output.exists())
@@ -197,9 +197,9 @@ class AgentInteractionTests(unittest.TestCase):
                 if path == output and mode == "xb":
                     replacement.replace(output)
 
-        with patch("handouter.agents.manual.os.link", side_effect=OSError("no hard links")), \
+        with patch("coursecompiler.agents.manual.os.link", side_effect=OSError("no hard links")), \
              patch.object(Path, "open", replace_after_close), \
-             patch("handouter.agents.manual.shutil.copyfileobj", side_effect=OSError("copy failed")):
+             patch("coursecompiler.agents.manual.shutil.copyfileobj", side_effect=OSError("copy failed")):
             with self.assertRaisesRegex(OSError, "copy failed"):
                 _publish_exclusive_file(source, output)
         self.assertEqual(output.read_bytes(), b"another task's replacement")
@@ -289,7 +289,7 @@ class AgentInteractionTests(unittest.TestCase):
         self.assertIn("handoff/skill/references/slides/source-only.md", names)
 
     def test_codex_adapter_uses_workspace_write_noninteractive_exec(self):
-        with patch("handouter.agents.codex.availability", return_value=AgentAvailability("codex", True, "/fake/codex", "cli")):
+        with patch("coursecompiler.agents.codex.availability", return_value=AgentAvailability("codex", True, "/fake/codex", "cli")):
             command = codex.build_command(self.workspace, model="model-x")
         self.assertEqual(command[:2], ["/fake/codex", "exec"])
         self.assertIn("workspace-write", command)
@@ -298,7 +298,7 @@ class AgentInteractionTests(unittest.TestCase):
         self.assertEqual(command[-1], "-")
 
     def test_claude_adapter_is_noninteractive(self):
-        with patch("handouter.agents.claude.availability", return_value=AgentAvailability("claude", True, "/fake/claude", "cli")):
+        with patch("coursecompiler.agents.claude.availability", return_value=AgentAvailability("claude", True, "/fake/claude", "cli")):
             command = claude.build_command(self.workspace, model="model-y")
         self.assertEqual(command[0], "/fake/claude")
         self.assertIn("--print", command)
@@ -317,9 +317,9 @@ class AgentInteractionTests(unittest.TestCase):
                 (root / relative).write_text("# Generated note\n\nCourse content.\n", encoding="utf-8")
             return SimpleNamespace(returncode=0)
 
-        with patch("handouter.agents.claude.availability", return_value=AgentAvailability("claude", True, "/fake/claude", "cli")), \
-             patch("handouter.agents.claude.build_command", return_value=["/fake/claude", "--print"]), \
-             patch("handouter.agents.runner.subprocess.run", side_effect=fake_run):
+        with patch("coursecompiler.agents.claude.availability", return_value=AgentAvailability("claude", True, "/fake/claude", "cli")), \
+             patch("coursecompiler.agents.claude.build_command", return_value=["/fake/claude", "--print"]), \
+             patch("coursecompiler.agents.runner.subprocess.run", side_effect=fake_run):
             result = run_cli_agent(self.workspace, agent="claude")
 
         self.assertTrue(result.validation_ok)
@@ -336,9 +336,9 @@ class AgentInteractionTests(unittest.TestCase):
                 path.write_text("# Generated note\n\nCourse content.\n", encoding="utf-8")
             return SimpleNamespace(returncode=0)
 
-        with patch("handouter.agents.codex.availability", return_value=AgentAvailability("codex", True, "/fake/codex", "cli")), \
-             patch("handouter.agents.codex.build_command", return_value=["/fake/codex", "exec", "-"]), \
-             patch("handouter.agents.runner.subprocess.run", side_effect=fake_run):
+        with patch("coursecompiler.agents.codex.availability", return_value=AgentAvailability("codex", True, "/fake/codex", "cli")), \
+             patch("coursecompiler.agents.codex.build_command", return_value=["/fake/codex", "exec", "-"]), \
+             patch("coursecompiler.agents.runner.subprocess.run", side_effect=fake_run):
             result = run_cli_agent(self.workspace, agent="codex")
 
         self.assertTrue(result.validation_ok)
@@ -357,9 +357,9 @@ class AgentInteractionTests(unittest.TestCase):
             (root / "transcript" / "transcript.txt").write_text("tampered", encoding="utf-8")
             return SimpleNamespace(returncode=0)
 
-        with patch("handouter.agents.codex.availability", return_value=AgentAvailability("codex", True, "/fake/codex", "cli")), \
-             patch("handouter.agents.codex.build_command", return_value=["/fake/codex", "exec", "-"]), \
-             patch("handouter.agents.runner.subprocess.run", side_effect=fake_run):
+        with patch("coursecompiler.agents.codex.availability", return_value=AgentAvailability("codex", True, "/fake/codex", "cli")), \
+             patch("coursecompiler.agents.codex.build_command", return_value=["/fake/codex", "exec", "-"]), \
+             patch("coursecompiler.agents.runner.subprocess.run", side_effect=fake_run):
             result = run_cli_agent(self.workspace, agent="codex")
         self.assertFalse(result.validation_ok)
         self.assertTrue(any("workspace:" in error for error in result.validation_errors))
@@ -377,7 +377,7 @@ class AgentInteractionTests(unittest.TestCase):
     def test_agents_cli_reports_manual_and_cli_backends(self):
         fake = [AgentAvailability("codex", True, "/codex", "cli"), AgentAvailability("claude", False, None, "cli")]
         stdout = io.StringIO()
-        with patch("handouter.cli.available_cli_agents", return_value=fake), contextlib.redirect_stdout(stdout):
+        with patch("coursecompiler.cli.available_cli_agents", return_value=fake), contextlib.redirect_stdout(stdout):
             code = cli.main(["agents"])
         self.assertEqual(code, 0)
         payload = json.loads(stdout.getvalue())
@@ -386,9 +386,9 @@ class AgentInteractionTests(unittest.TestCase):
         self.assertFalse(payload["cli"][1]["available"])
 
     def test_cli_agent_success_without_files_is_not_accepted(self):
-        with patch("handouter.agents.codex.availability", return_value=AgentAvailability("codex", True, "/fake/codex", "cli")), \
-             patch("handouter.agents.codex.build_command", return_value=["/fake/codex", "exec", "-"]), \
-             patch("handouter.agents.runner.subprocess.run", return_value=SimpleNamespace(returncode=0)):
+        with patch("coursecompiler.agents.codex.availability", return_value=AgentAvailability("codex", True, "/fake/codex", "cli")), \
+             patch("coursecompiler.agents.codex.build_command", return_value=["/fake/codex", "exec", "-"]), \
+             patch("coursecompiler.agents.runner.subprocess.run", return_value=SimpleNamespace(returncode=0)):
             result = run_cli_agent(self.workspace, agent="codex")
         self.assertFalse(result.validation_ok)
         self.assertTrue(any("不存在" in error for error in result.validation_errors))

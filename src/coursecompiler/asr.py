@@ -72,7 +72,7 @@ def transcribe_sensevoice(
         from funasr import AutoModel
         from funasr.utils.postprocess_utils import rich_transcription_postprocess
     except ImportError as exc:
-        raise ASRError("SenseVoice 需要可选依赖 funasr/torch；请安装 handouter[asr]") from exc
+        raise ASRError("SenseVoice 需要可选依赖 funasr/torch；请安装 coursecompiler[asr]") from exc
 
     staging = destination.parent / f".{destination.name}.tmp-{uuid.uuid4().hex}"
     staging.mkdir(parents=True, exist_ok=False)

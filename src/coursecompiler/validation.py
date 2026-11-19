@@ -1,4 +1,4 @@
-"""Structural validation for prepared Handouter workspaces and handoff bundles."""
+"""Structural validation for prepared CourseCompiler workspaces and handoff bundles."""
 
 from __future__ import annotations
 

@@ -15,12 +15,12 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from handouter.agents.base import AgentAvailability
-from handouter import cli
-from handouter.product import discover_asset_zips, inspect_asset_zip, normalize_dropped_path, product_artifacts, resolve_asset_zip
-from handouter.service import prepare_lecture, refresh_handoff
-from handouter.tui import _clip_columns, _display_width, _task_cli_args, available_agent_choices, build_cli_args, friendly_artifact_paths
-from handouter.validation import validate_note_output
+from coursecompiler.agents.base import AgentAvailability
+from coursecompiler import cli
+from coursecompiler.product import discover_asset_zips, inspect_asset_zip, normalize_dropped_path, product_artifacts, resolve_asset_zip
+from coursecompiler.service import prepare_lecture, refresh_handoff
+from coursecompiler.tui import _clip_columns, _display_width, _task_cli_args, available_agent_choices, build_cli_args, friendly_artifact_paths
+from coursecompiler.validation import validate_note_output
 
 
 class ProductDirectoryTests(unittest.TestCase):
@@ -57,7 +57,7 @@ class ProductDirectoryTests(unittest.TestCase):
 
     def test_asset_identity_uses_only_safe_external_plugin_fields(self):
         asset = self.make_zip("identified.zip", identified=True)
-        with patch("handouter.external_collector.inspect_browser_export", return_value={
+        with patch("coursecompiler.external_collector.inspect_browser_export", return_value={
                 "course_title": "自动识别课程", "lecture_date": None, "source_sha256": "a" * 64,
                 "source_id": "opaque-course-lecture"}):
             identity = inspect_asset_zip(asset)
@@ -141,7 +141,7 @@ class ProductDirectoryTests(unittest.TestCase):
             AgentAvailability("codex", True, "/codex", "cli"),
             AgentAvailability("claude", False, None, "cli"),
         ]
-        with patch("handouter.tui.available_cli_agents", return_value=fake):
+        with patch("coursecompiler.tui.available_cli_agents", return_value=fake):
             values, labels = available_agent_choices()
         self.assertEqual(values, ["web", "manual", "codex"])
         self.assertEqual(labels["manual"], "GUI handoff")

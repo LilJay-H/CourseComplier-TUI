@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from handouter.output_refs import resolve_output_ref
+from coursecompiler.output_refs import resolve_output_ref
 
 
 class OutputRefTests(unittest.TestCase):
@@ -40,20 +40,20 @@ class OutputRefTests(unittest.TestCase):
         ref = dict(kind='composer_object', output_sha256=self.digest, object_id='e1')
         kwargs = dict(root='root', sources={}, mode='complete', plan={})
         entry = dict(id='e1', kind='excerpt', output_span=[0, 2])
-        with patch('handouter.composition_store.checked_composition', return_value={'objects': [entry]}) as checker:
+        with patch('coursecompiler.composition_store.checked_composition', return_value={'objects': [entry]}) as checker:
             self.assertEqual(resolve_output_ref(self.data, ref, **kwargs).text, '重复')
             checker.assert_called_once_with('root', {}, self.data, 'complete', {})
-        with patch('handouter.composition_store.checked_composition', side_effect=ValueError('COMPOSER_COMPOSITION_MISMATCH')):
+        with patch('coursecompiler.composition_store.checked_composition', side_effect=ValueError('COMPOSER_COMPOSITION_MISMATCH')):
             with self.assertRaises(ValueError):
                 resolve_output_ref(self.data, ref, **kwargs)
-        with patch('handouter.composition_store.checked_composition', return_value={'objects': [entry, entry]}):
+        with patch('coursecompiler.composition_store.checked_composition', return_value={'objects': [entry, entry]}):
             with self.assertRaisesRegex(ValueError, 'AMBIGUOUS'):
                 resolve_output_ref(self.data, ref, **kwargs)
 
     def test_actual_host_sidecar_roundtrip_and_tamper(self):
-        from handouter.composer import compose_with_manifest
-        from handouter.composition_store import save_composition, manifest_path
-        from handouter.source_refs import source_hashes
+        from coursecompiler.composer import compose_with_manifest
+        from coursecompiler.composition_store import save_composition, manifest_path
+        from coursecompiler.source_refs import source_hashes
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'transcript').mkdir()

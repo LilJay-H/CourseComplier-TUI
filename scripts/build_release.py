@@ -163,7 +163,7 @@ def _release_cache_dir(override: Path | None) -> Path:
             if not value.strip():
                 raise ValueError(f"{key} must name a nonempty cache directory")
             return Path(value)
-    return Path.home() / ".cache" / "handouter" / "release"
+    return Path.home() / ".cache" / "coursecompiler" / "release"
 
 
 def _runtime_files(target: str, *, cache_dir: Path | None = None) -> tuple[dict[str, bytes], dict]:
@@ -225,15 +225,15 @@ def build_bundle(
 
     import sys
     sys.path.insert(0, str(ROOT))
-    import handouter_build
+    import coursecompiler_build
 
     with tempfile.TemporaryDirectory() as td:
         temp = Path(td)
-        sdist = temp / handouter_build.build_sdist(str(temp))
+        sdist = temp / coursecompiler_build.build_sdist(str(temp))
         files: dict[str, bytes] = {}
         with tarfile.open(sdist, "r:gz") as archive:
             members = [member for member in archive.getmembers() if member.isfile()]
-            prefix = f"handouter-{version}/"
+            prefix = f"coursecompiler_tui-{version}/"
             for member in members:
                 if not member.name.startswith(prefix):
                     raise ValueError(f"unexpected sdist member: {member.name}")
@@ -277,7 +277,7 @@ def build_bundle(
                 for relative, data in sorted(files.items()):
                     executable = (
                         platform == "macos"
-                        and relative in {"setup-handouter.command", "start-handouter.command", "setup-course-compiler.command", "start-course-compiler.command", "runtime/ffmpeg/ffmpeg", "runtime/ffmpeg/ffprobe"}
+                        and relative in {"setup-coursecompiler.command", "start-coursecompiler.command", "setup-course-compiler.command", "start-course-compiler.command", "runtime/ffmpeg/ffmpeg", "runtime/ffmpeg/ffprobe"}
                     )
                     archive.writestr(_zip_info(f"{root_name}/{relative}", executable=executable), data)
             with zipfile.ZipFile(staging, "r") as archive:

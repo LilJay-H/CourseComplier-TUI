@@ -23,7 +23,7 @@ TEXT = '合成课程。设 x 大于零，平方根有定义。这里的材料仅
 
 
 def cli(*args):
-    result = subprocess.run([sys.executable, '-X', 'utf8', '-I', '-m', 'handouter', *map(str, args)],
+    result = subprocess.run([sys.executable, '-X', 'utf8', '-I', '-m', 'coursecompiler', *map(str, args)],
                             capture_output=True, text=True, encoding='utf-8')
     if result.returncode:
         raise RuntimeError(result.stderr + result.stdout)
@@ -52,18 +52,18 @@ def main():
     args = parser.parse_args()
     root = args.output.resolve()
     root.mkdir(parents=True, exist_ok=False)
-    import handouter
-    from handouter.agents.base import AgentAvailability
-    from handouter.agents.runner import run_cli_agent
-    from handouter.agents.manual import create_manual_bundle
-    from handouter.agents.web import create_web_handoff
-    from handouter.product import exporter_script_path
-    from handouter.service import build_from_local_asset_zip
-    from handouter.tasks import retry_html
-    from handouter.validation import validate_workspace, validate_note_output
-    from handouter.doctor import require_features
+    import coursecompiler
+    from coursecompiler.agents.base import AgentAvailability
+    from coursecompiler.agents.runner import run_cli_agent
+    from coursecompiler.agents.manual import create_manual_bundle
+    from coursecompiler.agents.web import create_web_handoff
+    from coursecompiler.product import exporter_script_path
+    from coursecompiler.service import build_from_local_asset_zip
+    from coursecompiler.tasks import retry_html
+    from coursecompiler.validation import validate_workspace, validate_note_output
+    from coursecompiler.doctor import require_features
 
-    module = Path(handouter.__file__).resolve()
+    module = Path(coursecompiler.__file__).resolve()
     assert 'site-packages' in module.parts, 'Run with an isolated, non-editable wheel installation'
     assert exporter_script_path() is None, "Run with no external plugin configuration"
     manifest = {'schema_version': 1, 'lecture': {'id': 'synthetic-local', 'course_title': '合成示例',
@@ -91,7 +91,7 @@ def main():
         archive.write(wav_path, 'synthetic.wav')
         archive.writestr('slides/images/one.png', PNG)
     with patch.dict(sys.modules, fake_asr_modules()), \
-         patch('handouter.doctor.require_features', side_effect=lambda features, **kwargs:
+         patch('coursecompiler.doctor.require_features', side_effect=lambda features, **kwargs:
                require_features([feature for feature in features if feature != 'asr'])):
         result = build_from_local_asset_zip(root / 'media', lecture_id='synthetic-media',
                                            course_title='合成示例', asset_zip=media_zip,
@@ -120,8 +120,8 @@ for relative in sources['expected_outputs'].values():
         manual = create_manual_bundle(workspace)
         web = create_web_handoff(workspace)
         assert manual.bundle.is_file() and web.slides.read_bytes().startswith(b'%PDF-')
-        with patch('handouter.agents.codex.availability', return_value=AgentAvailability('codex', True, sys.executable, 'cli')), \
-             patch('handouter.agents.codex.build_command', return_value=[sys.executable, '-X', 'utf8', '-I', str(agent)]):
+        with patch('coursecompiler.agents.codex.availability', return_value=AgentAvailability('codex', True, sys.executable, 'cli')), \
+             patch('coursecompiler.agents.codex.build_command', return_value=[sys.executable, '-X', 'utf8', '-I', str(agent)]):
             run = run_cli_agent(workspace, agent='codex')
         assert run.validation_ok, run.validation_errors
         assert validate_note_output(workspace).ok

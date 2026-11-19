@@ -1,13 +1,13 @@
 # PPT ZIP 导入与浏览器包转换
 
-更新：2026-10-25，适用于 Handouter 0.2.0。PPT 导入位于 `src/handouter/importers.py`；浏览器包转换经 `external_collector.py` 调用独立插件。已有转写可用 `handouter prepare --slides-zip`；浏览器课程包先按插件指南配置并确认域名。
+更新：2026-10-25，适用于 Handouter 0.2.0。PPT 导入位于 `src/coursecompiler/importers.py`；浏览器包转换经 `external_collector.py` 调用独立插件。已有转写可用 `coursecompiler prepare --slides-zip`；浏览器课程包先按插件指南配置并确认域名。
 
 ## 推荐使用
 
 ### 只导入 PPT 到交接工作区
 
 ```bash
-PYTHONPATH=src .venv/bin/python -m handouter prepare \
+PYTHONPATH=src .venv/bin/python -m coursecompiler prepare \
   --lecture-id lecture-001 \
   --course-title "课程名称" \
   --transcript /path/to/transcript.txt \

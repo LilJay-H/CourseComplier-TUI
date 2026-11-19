@@ -15,14 +15,14 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from handouter.alignment import align_segments_to_slides
-from handouter.asr import ASRResult, normalize_funasr_result
-from handouter.doctor import run_doctor
-from handouter.media import MediaError, extract_audio, probe_duration_ms, _run
-from handouter.service import build_from_audio, prepare_lecture
-import handouter.tui as tui_module
-from handouter.tui import build_cli_args
-from handouter.validation import validate_workspace
+from coursecompiler.alignment import align_segments_to_slides
+from coursecompiler.asr import ASRResult, normalize_funasr_result
+from coursecompiler.doctor import run_doctor
+from coursecompiler.media import MediaError, extract_audio, probe_duration_ms, _run
+from coursecompiler.service import build_from_audio, prepare_lecture
+import coursecompiler.tui as tui_module
+from coursecompiler.tui import build_cli_args
+from coursecompiler.validation import validate_workspace
 
 
 class MediaProxyTests(unittest.TestCase):
@@ -30,7 +30,7 @@ class MediaProxyTests(unittest.TestCase):
         inherited = {"HTTP_PROXY": "http://localhost:1", "https_proxy": "http://localhost:2",
                      "All_Proxy": "socks5://localhost:3", "FTP_PROXY": "http://localhost:4",
                      "no_proxy": "localhost", "PATH": "/test/bin", "KEEP_ME": "yes"}
-        with patch.dict(os.environ, inherited, clear=True), patch("handouter.media.subprocess.run") as run:
+        with patch.dict(os.environ, inherited, clear=True), patch("coursecompiler.media.subprocess.run") as run:
             before = dict(os.environ)
             _run(["ffmpeg", "-version"])
             env = run.call_args.kwargs["env"]
@@ -46,7 +46,7 @@ class MediaProxyTests(unittest.TestCase):
 class ASRPersistenceTests(unittest.TestCase):
     def test_synthetic_backend_persists_all_evidence_on_windows(self):
         from types import ModuleType
-        from handouter.asr import transcribe_sensevoice
+        from coursecompiler.asr import transcribe_sensevoice
         modules = {name: ModuleType(name) for name in
                    ('funasr', 'funasr.utils', 'funasr.utils.postprocess_utils')}
         class Model:
@@ -204,7 +204,7 @@ class MediaIntegrationTests(unittest.TestCase):
             "-shortest", "-c:v", "libx264", "-c:a", "aac", str(video),
         ], check=True)
         output = self.root / "fallback.m4a"
-        with patch("handouter.media.verify_audio_decodable", side_effect=[MediaError("bad copy"), None]) as verify:
+        with patch("coursecompiler.media.verify_audio_decodable", side_effect=[MediaError("bad copy"), None]) as verify:
             result = extract_audio(video, output)
         self.assertEqual(result.mode, "aac")
         self.assertEqual(verify.call_count, 2)
@@ -230,8 +230,8 @@ class ServiceBuildTests(unittest.TestCase):
                 (out / "transcript.txt").write_text("测试", encoding="utf-8")
                 return ASRResult(out, out / "raw.json", out / "segments.json", out / "transcript.txt", 1, "sentence_or_vad", "cpu", 0.1)
 
-            with patch("handouter.service.transcribe_sensevoice", side_effect=fake_asr), \
-                 patch('handouter.doctor.require_features'):
+            with patch("coursecompiler.service.transcribe_sensevoice", side_effect=fake_asr), \
+                 patch('coursecompiler.doctor.require_features'):
                 result = build_from_audio(
                     root / "workspace", lecture_id="a-01", course_title="A", audio=audio,
                     skill_path=skill, device="cpu",

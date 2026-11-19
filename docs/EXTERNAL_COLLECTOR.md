@@ -4,16 +4,18 @@ TXT、音视频和标准资源 ZIP 直接进入本地流程，不需要插件。
 
 ## 智云插件
 
-插件和配套浏览器脚本位于独立仓库：https://github.com/Silhouette-my/zhiyun-collector 。当前配套版本为 `0.3.0.dev2`；按该仓库说明安装对应 macOS / Windows 构建，并从可信发布渠道核对工具身份及可执行文件 SHA-256。插件不随本仓库 wheel、源码包或启动包分发。
+插件和配套浏览器脚本位于独立仓库：https://github.com/Silhouette-my/zhiyun-collector 。新版 `0.3.0.dev3` 使用 `coursecompiler-zhiyun-collector` 作为工具 ID 和可执行文件名；按该仓库说明使用可获得的构建，并从可信渠道核对工具身份及可执行文件 SHA-256。该版本尚未推送或发布。插件不随本仓库 wheel、源码包或启动包分发。
 
 ```bash
 course-compiler collector-configure \
-  --executable /absolute/path/to/zhiyun-collector \
+  --executable /absolute/path/to/coursecompiler-zhiyun-collector \
   --sha256 <trusted-release-sha256> \
-  --tool-id handouter-zhiyun-collector \
+  --tool-id coursecompiler-zhiyun-collector \
   --exporter-script /absolute/path/to/zhiyun_exporter.user.js
 course-compiler collector-inspect /path/to/browser.zip
 ```
+
+已安装旧版插件时仍按原清单填写 `handouter-zhiyun-collector` 及对应旧文件名和摘要，无需更改旧制品。
 
 Windows 将可执行路径换成绝对 `.exe` 路径，路径有空格时加引号；参数含义不变。浏览器脚本也可由插件的 `export-script --output <new-path>` 导出，配置中的脚本仅用于提示路径，不会执行它。更新插件后需重新核对摘要并配置。
 
@@ -26,7 +28,7 @@ course-compiler run --asset /path/to/browser.zip \
 
 ## 开发者接口与隐私边界
 
-`handouter.external_collector` 通过参数数组启动用户明确配置、摘要固定的外部工具（`<executable> protocol`）。不扫描 EXE，不执行 ZIP 内程序，不拼接 shell。每次进程处理一条有界 NDJSON 请求，`protocol_version: 1`：
+`coursecompiler.external_collector` 通过参数数组启动用户明确配置、摘要固定的外部工具（`<executable> protocol`）。不扫描 EXE，不执行 ZIP 内程序，不拼接 shell。每次进程处理一条有界 NDJSON 请求，`protocol_version: 1`：
 
 - `identity`：工具身份、版本、协议和 `inspect` / `convert` 能力。
 - `inspect`：输入 `source_path`；返回 `inspection`，仅含工具身份、课程标题、授课日期、`media_hosts`、`source_sha256`，可选安全的 `source_id` / `source_fingerprint`。不返回媒体 URL、Cookie 或脚本。

@@ -3,8 +3,8 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from handouter.resources import parse_resources
-from handouter.html_core import render_note
+from coursecompiler.resources import parse_resources
+from coursecompiler.html_core import render_note
 
 
 class StructureRegressionTests(unittest.TestCase):

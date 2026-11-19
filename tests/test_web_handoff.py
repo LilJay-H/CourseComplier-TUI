@@ -8,10 +8,10 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from handouter import cli
-from handouter.agents.web import create_web_handoff
-from handouter.service import prepare_lecture
-from handouter.tui import _task_cli_args
+from coursecompiler import cli
+from coursecompiler.agents.web import create_web_handoff
+from coursecompiler.service import prepare_lecture
+from coursecompiler.tui import _task_cli_args
 
 
 class WebHandoffTests(unittest.TestCase):

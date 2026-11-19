@@ -139,8 +139,8 @@ def check_runtime(python: Path, *, asr: bool = True) -> None:
              "print('ASR imports OK:', torch.__version__, torchaudio.__version__)"])
     run([str(python), "-m", "pip", "check"])
     features = ['core', 'pdf', 'html', 'media', 'tui'] + (['asr'] if asr else [])
-    run([str(python), '-c', f"from handouter.doctor import require_features; require_features({features!r})"])
-    run([str(python), "-m", "handouter", "doctor"])
+    run([str(python), '-c', f"from coursecompiler.doctor import require_features; require_features({features!r})"])
+    run([str(python), "-m", "coursecompiler", "doctor"])
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -158,7 +158,7 @@ def main(argv: list[str] | None = None) -> int:
             if not python.is_file():
                 raise RuntimeError("Run setup-course-compiler first to install Course Compiler.")
             refresh_windows_path()
-            run([str(python), "-m", "handouter", "tui"])
+            run([str(python), "-m", "coursecompiler", "tui"])
             return 0
         if not python_supported():
             raise RuntimeError("Course Compiler requires Python >=3.11,<4.")

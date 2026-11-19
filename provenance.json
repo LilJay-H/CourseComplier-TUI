@@ -5,322 +5,322 @@
   "files": [
     {
       "source": "src/handouter/alignment.py",
-      "destination": "src/handouter/alignment.py",
+      "destination": "src/coursecompiler/alignment.py",
       "source_sha256": "9635d98b456f292e2abcea32790d36befde54d279a126f783bc037d5f2f8ab2f"
     },
     {
       "source": "src/handouter/asr.py",
-      "destination": "src/handouter/asr.py",
+      "destination": "src/coursecompiler/asr.py",
       "source_sha256": "4f25f1a17e3ed35f36b1514bb27e4f4fcf0f45fabae578864dcc0a54837847ec"
     },
     {
       "source": "src/handouter/audit_adjudication.py",
-      "destination": "src/handouter/audit_adjudication.py",
+      "destination": "src/coursecompiler/audit_adjudication.py",
       "source_sha256": "8b2aff8fb8ffac08c61eb53fad8a91909700f3c275f4353588843edbdbe8e3b9"
     },
     {
       "source": "src/handouter/audit_chunks.py",
-      "destination": "src/handouter/audit_chunks.py",
+      "destination": "src/coursecompiler/audit_chunks.py",
       "source_sha256": "0c8c16ebd157b97193cac1c26c0786338a80378f67bdd9143c7686959c9827b3"
     },
     {
       "source": "src/handouter/audit_session.py",
-      "destination": "src/handouter/audit_session.py",
+      "destination": "src/coursecompiler/audit_session.py",
       "source_sha256": "4ccf1f0a69eaa5fdb4aabba4b28b7a220b2fdb4be1ba3940d47f8dd1d333badf"
     },
     {
       "source": "src/handouter/audit_stages.py",
-      "destination": "src/handouter/audit_stages.py",
+      "destination": "src/coursecompiler/audit_stages.py",
       "source_sha256": "8096c4c410d89d0dbe8fb1459bcda2bbc1d77d83cd3ce8a689cd152e652b19c3"
     },
     {
       "source": "src/handouter/authoring.py",
-      "destination": "src/handouter/authoring.py",
+      "destination": "src/coursecompiler/authoring.py",
       "source_sha256": "61df01308119065e798eaa71871162eb32a5994a89bdc32a96850df2e6d7e49e"
     },
     {
       "source": "src/handouter/authoring_audit.py",
-      "destination": "src/handouter/authoring_audit.py",
+      "destination": "src/coursecompiler/authoring_audit.py",
       "source_sha256": "615968ec3e48df19f7792c11e459c3a086930941cd61180812e177792d8ece11"
     },
     {
       "source": "src/handouter/authoring_eval.py",
-      "destination": "src/handouter/authoring_eval.py",
+      "destination": "src/coursecompiler/authoring_eval.py",
       "source_sha256": "1686006468580f6d1cf104ecc6dde0cadcbc841985754c2e1f2d623bf1fdc0a3"
     },
     {
       "source": "src/handouter/authoring_repair.py",
-      "destination": "src/handouter/authoring_repair.py",
+      "destination": "src/coursecompiler/authoring_repair.py",
       "source_sha256": "8610e875c3a80eb4c4cfba010525cc3ad03d5f2dca1e41487167a8839db4eec4"
     },
     {
       "source": "src/handouter/authoring_stages.py",
-      "destination": "src/handouter/authoring_stages.py",
+      "destination": "src/coursecompiler/authoring_stages.py",
       "source_sha256": "de42cfee97f7521d5102ffde7644015bdbb31e837c34a4e75819ab9669e19638"
     },
     {
       "source": "src/handouter/authoring_v2.py",
-      "destination": "src/handouter/authoring_v2.py",
+      "destination": "src/coursecompiler/authoring_v2.py",
       "source_sha256": "6caab64b51e0ae59542bbd943ba7817d738adad9177a85d514afa4a97cbfc70d"
     },
     {
       "source": "src/handouter/cli.py",
-      "destination": "src/handouter/cli.py",
+      "destination": "src/coursecompiler/cli.py",
       "source_sha256": "d42bc7e7986ac4134e8c626a2546030186a57c25c11fc1736310235aa182d532"
     },
     {
       "source": "src/handouter/composer.py",
-      "destination": "src/handouter/composer.py",
+      "destination": "src/coursecompiler/composer.py",
       "source_sha256": "b92c44fb471e2621cbb39e0594cddfd79b1722c9b5d1fe761589d1ee632e188a"
     },
     {
       "source": "src/handouter/composition_store.py",
-      "destination": "src/handouter/composition_store.py",
+      "destination": "src/coursecompiler/composition_store.py",
       "source_sha256": "858c0c9036513191b79044ef05fda732cc936b2afa008f80c9e0e210ca9ff68a"
     },
     {
       "source": "src/handouter/credentials.py",
-      "destination": "src/handouter/credentials.py",
+      "destination": "src/coursecompiler/credentials.py",
       "source_sha256": "a5be9d91bd85303fda4ac54f149692ad5d95a97fac6886406c20e7dd50e81039"
     },
     {
       "source": "src/handouter/delivery.py",
-      "destination": "src/handouter/delivery.py",
+      "destination": "src/coursecompiler/delivery.py",
       "source_sha256": "0692e3de8289d596a936973ece5911ec5ff0ac2b5418294f75fbae6de766295e"
     },
     {
       "source": "src/handouter/doctor.py",
-      "destination": "src/handouter/doctor.py",
+      "destination": "src/coursecompiler/doctor.py",
       "source_sha256": "6cd839100a6f959830a8fcfcac26a90edee3b9d604cc44a7f235d527ef83836e"
     },
     {
       "source": "src/handouter/editorial_context.py",
-      "destination": "src/handouter/editorial_context.py",
+      "destination": "src/coursecompiler/editorial_context.py",
       "source_sha256": "c2d872ac051c7dc7e8c0bc5427dc543f379bf29f0357e40ea9c29cf1ed2911fe"
     },
     {
       "source": "src/handouter/editorial_review.py",
-      "destination": "src/handouter/editorial_review.py",
+      "destination": "src/coursecompiler/editorial_review.py",
       "source_sha256": "a55e5114fedb4fd5558b116a1893cc3d897881f36ebad88dde0631e1a64f9821"
     },
     {
       "source": "src/handouter/handoff.py",
-      "destination": "src/handouter/handoff.py",
+      "destination": "src/coursecompiler/handoff.py",
       "source_sha256": "5aeb16601a54ab97df20e4f3921a806020481690040fc10136cf0a6b8e396497"
     },
     {
       "source": "src/handouter/html_core.py",
-      "destination": "src/handouter/html_core.py",
+      "destination": "src/coursecompiler/html_core.py",
       "source_sha256": "81c5351797330134b041f27ddcc48d6379cbaca19f1a5b58506d450863615930"
     },
     {
       "source": "src/handouter/html_export.py",
-      "destination": "src/handouter/html_export.py",
+      "destination": "src/coursecompiler/html_export.py",
       "source_sha256": "84dd83205142b41d7b4f8bc94329c62ff3881e9574ada6f6e501378b2fe51d91"
     },
     {
       "source": "src/handouter/importers.py",
-      "destination": "src/handouter/importers.py",
+      "destination": "src/coursecompiler/importers.py",
       "source_sha256": "b42e37405f953119665d01db52f56731bf971b589ff5af590eac0eddcb035548"
     },
     {
       "source": "src/handouter/invocation_receipts.py",
-      "destination": "src/handouter/invocation_receipts.py",
+      "destination": "src/coursecompiler/invocation_receipts.py",
       "source_sha256": "7d3d0e3a79b69aa9285208a459cc9801662baee28f5600c471c9ca09357d74ae"
     },
     {
       "source": "src/handouter/local_agent_workflow.py",
-      "destination": "src/handouter/local_agent_workflow.py",
+      "destination": "src/coursecompiler/local_agent_workflow.py",
       "source_sha256": "266159abf2b4473b28c0116d7cfb5277107aedbee690c71414f4e0a0c2014f43"
     },
     {
       "source": "src/handouter/math_markup.py",
-      "destination": "src/handouter/math_markup.py",
+      "destination": "src/coursecompiler/math_markup.py",
       "source_sha256": "88e74af85c00bea4e6337fcecbbab873b906815e8ab570584019fa512d27ba76"
     },
     {
       "source": "src/handouter/media.py",
-      "destination": "src/handouter/media.py",
+      "destination": "src/coursecompiler/media.py",
       "source_sha256": "224a070872382338bf039d6001e00d0aae35c3586b0d1f55cbc1db92d2f29913"
     },
     {
       "source": "src/handouter/note_validation.py",
-      "destination": "src/handouter/note_validation.py",
+      "destination": "src/coursecompiler/note_validation.py",
       "source_sha256": "846ad871f3855c86dbde0f4b6a8e9c2063da922466d21454cd79782c88694684"
     },
     {
       "source": "src/handouter/numeric_review.py",
-      "destination": "src/handouter/numeric_review.py",
+      "destination": "src/coursecompiler/numeric_review.py",
       "source_sha256": "0598551845b6501cb7e29e7b6f72b39e6188a0c8c4efc104dfb28215f90fccce"
     },
     {
       "source": "src/handouter/organization.py",
-      "destination": "src/handouter/organization.py",
+      "destination": "src/coursecompiler/organization.py",
       "source_sha256": "9d60aae24beb39e1c90f5c66886713d4fbee0376fa56b0fbd52c9c815ac67aa7"
     },
     {
       "source": "src/handouter/output_refs.py",
-      "destination": "src/handouter/output_refs.py",
+      "destination": "src/coursecompiler/output_refs.py",
       "source_sha256": "f3da2b5c44af36ca8d0189b9cf82b03689103f135edd0b8dac024f90fb4272e1"
     },
     {
       "source": "src/handouter/platform_support.py",
-      "destination": "src/handouter/platform_support.py",
+      "destination": "src/coursecompiler/platform_support.py",
       "source_sha256": "d1d78e14073b7906f5504a5e884b60dd303a697db39c7810bbc940eb73ede138"
     },
     {
       "source": "src/handouter/product.py",
-      "destination": "src/handouter/product.py",
+      "destination": "src/coursecompiler/product.py",
       "source_sha256": "28aded77df940cc0946731c0598528a0a2cab2204b897b55ac0898b8e8bddcc6"
     },
     {
       "source": "src/handouter/quality_host.py",
-      "destination": "src/handouter/quality_host.py",
+      "destination": "src/coursecompiler/quality_host.py",
       "source_sha256": "139b6df2161eabec4722e0d46a458a50eb2728dd60d98aed1ea2cf5245948c2c"
     },
     {
       "source": "src/handouter/resources.py",
-      "destination": "src/handouter/resources.py",
+      "destination": "src/coursecompiler/resources.py",
       "source_sha256": "a971752cdc5c46ab772dc65fc3188983a8719f6f53a7437a74227ca1379c26bb"
     },
     {
       "source": "src/handouter/revision.py",
-      "destination": "src/handouter/revision.py",
+      "destination": "src/coursecompiler/revision.py",
       "source_sha256": "131cd3e56a9739602ccc581114c749e95982d3bffe22f7ba99fc7adb6086f740"
     },
     {
       "source": "src/handouter/runtime_tools.py",
-      "destination": "src/handouter/runtime_tools.py",
+      "destination": "src/coursecompiler/runtime_tools.py",
       "source_sha256": "01e1bb7a5822abf545a48c6fc02c0f602e5e08f6ae416f2ffcb93197bac0743a"
     },
     {
       "source": "src/handouter/safe_io.py",
-      "destination": "src/handouter/safe_io.py",
+      "destination": "src/coursecompiler/safe_io.py",
       "source_sha256": "923d94511274abfd3387fb32e0a5a93edcc679b50f2b85ef838e9b489baa0f6a"
     },
     {
       "source": "src/handouter/safe_io_core.py",
-      "destination": "src/handouter/safe_io_core.py",
+      "destination": "src/coursecompiler/safe_io_core.py",
       "source_sha256": "ae3f07c3b5a6d8475b0c2d92e6c27946caa8921525ada00cbf3678c503035e24"
     },
     {
       "source": "src/handouter/service.py",
-      "destination": "src/handouter/service.py",
+      "destination": "src/coursecompiler/service.py",
       "source_sha256": "2e4ac85d35597a33c34f89693fdb78530cd7ea66da9977eeb43e23ef90e21e08"
     },
     {
       "source": "src/handouter/settings.py",
-      "destination": "src/handouter/settings.py",
+      "destination": "src/coursecompiler/settings.py",
       "source_sha256": "88bc86d455201c850fce02507d7f33a26d4fc5c4a784b9565d1292a4407b46de"
     },
     {
       "source": "src/handouter/skill_plan.py",
-      "destination": "src/handouter/skill_plan.py",
+      "destination": "src/coursecompiler/skill_plan.py",
       "source_sha256": "085e0edbc7cc968b582d045c7836ab39d258ad0bfff53dfd7d8c8337b1b9d5d5"
     },
     {
       "source": "src/handouter/source_excerpt.py",
-      "destination": "src/handouter/source_excerpt.py",
+      "destination": "src/coursecompiler/source_excerpt.py",
       "source_sha256": "441fec3f3ad078fbb5ac078cef351cb45c6f2e317d82b97ae496fc06549605d8"
     },
     {
       "source": "src/handouter/source_quotes.py",
-      "destination": "src/handouter/source_quotes.py",
+      "destination": "src/coursecompiler/source_quotes.py",
       "source_sha256": "5fb15e667804d23fa5f2040c9dec1f5c2677c1b6988562909f03df2b0fc320e1"
     },
     {
       "source": "src/handouter/source_refs.py",
-      "destination": "src/handouter/source_refs.py",
+      "destination": "src/coursecompiler/source_refs.py",
       "source_sha256": "448bb165259697db68eea10a4cecda3f842e9c339c3f0ed0292fca2e4becd8eb"
     },
     {
       "source": "src/handouter/stage_cache.py",
-      "destination": "src/handouter/stage_cache.py",
+      "destination": "src/coursecompiler/stage_cache.py",
       "source_sha256": "3e6d83ba47d2d78532c8b3fc14b57c9bbb3f8192c244cb077f5f00b99326b3c9"
     },
     {
       "source": "src/handouter/tasks.py",
-      "destination": "src/handouter/tasks.py",
+      "destination": "src/coursecompiler/tasks.py",
       "source_sha256": "f4d6f31d9edf9c8a5445d9c861c14e352b56c2280087e4925368ed316ce5baa3"
     },
     {
       "source": "src/handouter/transactions.py",
-      "destination": "src/handouter/transactions.py",
+      "destination": "src/coursecompiler/transactions.py",
       "source_sha256": "240cd88ac1e9f4df6eac562355ea82a8ffa61f73b3bf64d5d2d626452deb9c1c"
     },
     {
       "source": "src/handouter/tui.py",
-      "destination": "src/handouter/tui.py",
+      "destination": "src/coursecompiler/tui.py",
       "source_sha256": "6c38221360da56d2207f0628ac7465be386ac9a1c902fcc89fac46d6f1c3632e"
     },
     {
       "source": "src/handouter/typora_export.py",
-      "destination": "src/handouter/typora_export.py",
+      "destination": "src/coursecompiler/typora_export.py",
       "source_sha256": "52fcda1e28434d2e701e5cb8baad0c7b128ef828fca27ea549359e370d66fe8d"
     },
     {
       "source": "src/handouter/typora_math.py",
-      "destination": "src/handouter/typora_math.py",
+      "destination": "src/coursecompiler/typora_math.py",
       "source_sha256": "fcb23329d9ba2516eed107f79f517bba98f6567b413d6b4da7b221ccdbd213ab"
     },
     {
       "source": "src/handouter/validation.py",
-      "destination": "src/handouter/validation.py",
+      "destination": "src/coursecompiler/validation.py",
       "source_sha256": "ab29f4f6ffddd9fd442ce1a53cf5426a8bb6e65c47858a88042459b5799795ac"
     },
     {
       "source": "src/handouter/web_text.py",
-      "destination": "src/handouter/web_text.py",
+      "destination": "src/coursecompiler/web_text.py",
       "source_sha256": "48030ef42eb7c97706be31e169fb60df3be3811dc9920682cc41efdf28b75d30"
     },
     {
       "source": "src/handouter/workspace.py",
-      "destination": "src/handouter/workspace.py",
+      "destination": "src/coursecompiler/workspace.py",
       "source_sha256": "e37be06b7a43739b7a055be69837251c3803582c0513bdd66ded39b16dd9e75d"
     },
     {
       "source": "src/handouter/__init__.py",
-      "destination": "src/handouter/__init__.py",
+      "destination": "src/coursecompiler/__init__.py",
       "source_sha256": "7c0ac16a29e6a0f3012169f349594614043337c5ccb7b23c407635010835f46d"
     },
     {
       "source": "src/handouter/__main__.py",
-      "destination": "src/handouter/__main__.py",
+      "destination": "src/coursecompiler/__main__.py",
       "source_sha256": "b2557ccf866c981fd65bc19b07e7280cc6963a4ee9558bbc1a08fa3cbe5e6158"
     },
     {
       "source": "src/handouter/agents/base.py",
-      "destination": "src/handouter/agents/base.py",
+      "destination": "src/coursecompiler/agents/base.py",
       "source_sha256": "59f29716008e5becb21accc626ab8a35b3ffce3de7c09c430153561ae50ee188"
     },
     {
       "source": "src/handouter/agents/claude.py",
-      "destination": "src/handouter/agents/claude.py",
+      "destination": "src/coursecompiler/agents/claude.py",
       "source_sha256": "05a30a07a2cfc16eaac0f95960f46b9504c26d5825515b90067d9dc0e791ab46"
     },
     {
       "source": "src/handouter/agents/codex.py",
-      "destination": "src/handouter/agents/codex.py",
+      "destination": "src/coursecompiler/agents/codex.py",
       "source_sha256": "46ae683ff114541d48c31b5f0c6d18763711bf3a17bfc9b8adeb2516bea221b1"
     },
     {
       "source": "src/handouter/agents/manual.py",
-      "destination": "src/handouter/agents/manual.py",
+      "destination": "src/coursecompiler/agents/manual.py",
       "source_sha256": "be1248fb532532e9fdcc7f792a76ab049f46f318ff1c2b35587d18f079271526"
     },
     {
       "source": "src/handouter/agents/runner.py",
-      "destination": "src/handouter/agents/runner.py",
+      "destination": "src/coursecompiler/agents/runner.py",
       "source_sha256": "dd6b62a441dd9235f281edc07c9e19216cefe8226d1cd2bcd27fc7292b4c24de"
     },
     {
       "source": "src/handouter/agents/web.py",
-      "destination": "src/handouter/agents/web.py",
+      "destination": "src/coursecompiler/agents/web.py",
       "source_sha256": "bbde23fee951342a748bc9c30984f7d80d31c70eaff055eb33847ae7df20fa6b"
     },
     {
       "source": "src/handouter/agents/__init__.py",
-      "destination": "src/handouter/agents/__init__.py",
+      "destination": "src/coursecompiler/agents/__init__.py",
       "source_sha256": "7825972115e4c9e1b09773fb290985457fd3d611c831a3b0370d4983c2fd62d0"
     },
     {
@@ -760,7 +760,7 @@
     },
     {
       "source": "src/handouter_local/sensevoice_normalize.py",
-      "destination": "src/handouter/sensevoice_normalize.py",
+      "destination": "src/coursecompiler/sensevoice_normalize.py",
       "source_sha256": "9e8846ca150913a91cd8af498a699db6ff06fdefb890725f4adb93ffd8e1a5de"
     },
     {

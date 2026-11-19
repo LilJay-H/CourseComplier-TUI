@@ -1,7 +1,7 @@
 import unittest
 from fractions import Fraction
 
-from handouter.numeric_review import (
+from coursecompiler.numeric_review import (
     MAX_CANDIDATES, MAX_DEPTH, MAX_EXPRESSION_LENGTH, MAX_TEXT_LENGTH,
     evaluate_decimal_expression, review_numeric_output, signed_integer_range,
 )

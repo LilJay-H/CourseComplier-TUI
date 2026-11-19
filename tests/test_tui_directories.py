@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import MagicMock, patch
 
-from handouter import tui
+from coursecompiler import tui
 
 
 class TUIDirectoryTests(unittest.TestCase):
@@ -35,7 +35,7 @@ class TUIDirectoryTests(unittest.TestCase):
         self.assertEqual((state['title'], state['lecture'], state['lecture_date']), ('用户课程名', 'user-id', '2026-02-03'))
 
     def test_loading_alias_title_canonicalizes_course_and_uses_shared_output(self):
-        from handouter.settings import course_settings_key
+        from coursecompiler.settings import course_settings_key
         key = course_settings_key('高级数据结构')
         directories = {'input_dir': '/synthetic/input', 'output_dir': '/synthetic/default',
                        'course_output_dirs': {key: {'course_title': '高级数据结构', 'output_dir': '/synthetic/ADS'}},

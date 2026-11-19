@@ -1,4 +1,4 @@
-"""Full-screen ASCII TUI for Handouter's normal product workflow.
+"""Full-screen ASCII TUI for CourseCompiler's normal product workflow.
 
 The interface is intentionally dependency-free (stdlib curses) and delegates all
 business work to the canonical CLI. Internal manifest/raw/alignment files remain
@@ -978,7 +978,7 @@ def _run_curses() -> None:  # pragma: no cover - interactive UI
             directory_error = ''
         except (OSError, ValueError) as exc:
             from .platform_support import desktop_directory
-            root = desktop_directory() / 'Handouter'
+            root = desktop_directory() / 'CourseCompiler'
             directories = dict(input_dir=str(root / '输入'), output_dir=str(root / '输出'), course_output_dirs={},
                                course_aliases={}, course_folder_modes={}, configured=False)
             directory_error = str(exc)

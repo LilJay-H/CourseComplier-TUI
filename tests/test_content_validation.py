@@ -7,12 +7,12 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-from handouter.agents.web import _evidence_text, create_web_handoff
-from handouter.asr import normalize_funasr_result
-from handouter.html_export import export_html
-from handouter.revision import read_revision_note
-from handouter.service import prepare_lecture
-from handouter.validation import validate_note_output, validate_workspace
+from coursecompiler.agents.web import _evidence_text, create_web_handoff
+from coursecompiler.asr import normalize_funasr_result
+from coursecompiler.html_export import export_html
+from coursecompiler.revision import read_revision_note
+from coursecompiler.service import prepare_lecture
+from coursecompiler.validation import validate_note_output, validate_workspace
 from _gates import requires_html
 
 PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=')

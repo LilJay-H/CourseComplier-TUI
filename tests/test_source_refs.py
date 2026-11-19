@@ -13,7 +13,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 
-from handouter.source_refs import SourceRefError, resolve_ref, source_hashes
+from coursecompiler.source_refs import SourceRefError, resolve_ref, source_hashes
 
 
 class SourceRefsTests(unittest.TestCase):

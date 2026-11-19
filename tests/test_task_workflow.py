@@ -7,11 +7,11 @@ import unittest
 import zipfile
 from unittest.mock import patch
 
-from handouter.asr import ASRResult
-from handouter.media import AudioExtractResult
-from handouter.service import prepare_lecture, build_from_media
-from handouter.agents.base import AgentAvailability
-from handouter.agents.runner import run_cli_agent
+from coursecompiler.asr import ASRResult
+from coursecompiler.media import AudioExtractResult
+from coursecompiler.service import prepare_lecture, build_from_media
+from coursecompiler.agents.base import AgentAvailability
+from coursecompiler.agents.runner import run_cli_agent
 from _gates import requires_html
 
 
@@ -36,9 +36,9 @@ class TaskWorkflowTests(unittest.TestCase):
             self.assertFalse((task / 'notes/deep-001.md').exists())
             (task / 'notes/summary-001.md').write_text('# Summary\n\nNew.\n')
             return SimpleNamespace(returncode=0)
-        with patch('handouter.agents.codex.availability', return_value=AgentAvailability('codex', True, '/fake/codex', 'cli')), \
-             patch('handouter.agents.codex.build_command', return_value=['/fake/codex']), \
-             patch('handouter.agents.runner.subprocess.run', side_effect=fake_run):
+        with patch('coursecompiler.agents.codex.availability', return_value=AgentAvailability('codex', True, '/fake/codex', 'cli')), \
+             patch('coursecompiler.agents.codex.build_command', return_value=['/fake/codex']), \
+             patch('coursecompiler.agents.runner.subprocess.run', side_effect=fake_run):
             result = run_cli_agent(self.workspace, agent='codex')
         self.assertTrue(result.validation_ok, result.validation_errors)
         self.assertEqual(completed.read_bytes(), before)
@@ -65,10 +65,10 @@ class TaskWorkflowTests(unittest.TestCase):
                 failed_once = True
                 raise OSError('synthetic downstream failure')
             return prepare_lecture(*args, **kwargs)
-        with patch('handouter.doctor.require_features'), \
-             patch('handouter.service.extract_audio', side_effect=audio) as extract, \
-             patch('handouter.service.transcribe_sensevoice', side_effect=asr) as transcribe, \
-             patch('handouter.service.prepare_lecture', side_effect=prepare):
+        with patch('coursecompiler.doctor.require_features'), \
+             patch('coursecompiler.service.extract_audio', side_effect=audio) as extract, \
+             patch('coursecompiler.service.transcribe_sensevoice', side_effect=asr) as transcribe, \
+             patch('coursecompiler.service.prepare_lecture', side_effect=prepare):
             kwargs = dict(lecture_id='resume', course_title='Synthetic', media_source=media_source,
                           use_slides_as_source=False)
             with self.assertRaises(OSError):
@@ -79,8 +79,8 @@ class TaskWorkflowTests(unittest.TestCase):
         self.assertEqual(transcribe.call_count, 1)
 
     def test_planner_partial_html_only_and_repeat_completion(self):
-        from handouter.tasks import plan_task, retry_html
-        from handouter.cli import _continue_payload
+        from coursecompiler.tasks import plan_task, retry_html
+        from coursecompiler.cli import _continue_payload
         self.assertEqual(plan_task(self.workspace).action, 'generate')
         (self.workspace / 'notes/deep-001.md').write_text('# Deep\n\nComplete.\n')
         self.assertEqual(plan_task(self.workspace).action, 'partial')
@@ -96,13 +96,13 @@ class TaskWorkflowTests(unittest.TestCase):
             with target.open('x') as handle:
                 handle.write('<!doctype html><html>synthetic</html>')
             return [target]
-        with patch('handouter.doctor.require_features'), patch('handouter.html_export.export_html', side_effect=export):
+        with patch('coursecompiler.doctor.require_features'), patch('coursecompiler.html_export.export_html', side_effect=export):
             first = retry_html(self.workspace)
             self.assertEqual(first['status'], 'failed')
             self.assertEqual(plan_task(self.workspace).action, 'html_only')
             self.assertEqual(retry_html(self.workspace)['status'], 'ready')
             self.assertEqual(plan_task(self.workspace).action, 'complete')
-            with patch('handouter.cli.run_cli_agent', side_effect=AssertionError('Agent must not run')):
+            with patch('coursecompiler.cli.run_cli_agent', side_effect=AssertionError('Agent must not run')):
                 payload, code = _continue_payload(self.workspace, agent='codex')
             self.assertEqual(code, 0)
             self.assertFalse(payload['agent_was_run'])
@@ -110,7 +110,7 @@ class TaskWorkflowTests(unittest.TestCase):
         self.assertEqual(before, {p.name: p.read_bytes() for p in (self.workspace / 'notes').glob('*.md')})
 
     def test_web_return_is_bound_to_task_and_preserves_existing_output(self):
-        from handouter.tasks import plan_task, import_note
+        from coursecompiler.tasks import plan_task, import_note
         source = self.root / 'returned.md'
         source.write_text('# Returned\n\nValid course text.\n')
         task_id = plan_task(self.workspace).task_id
@@ -124,7 +124,7 @@ class TaskWorkflowTests(unittest.TestCase):
         self.assertEqual((self.workspace / result['output']).read_bytes(), source.read_bytes())
 
     def test_web_placeholder_is_pending_not_a_completed_note(self):
-        from handouter.tasks import plan_task, import_note
+        from coursecompiler.tasks import plan_task, import_note
         source = self.root / 'pending.md'
         source.write_text('# Returned\n\n[插图位置：Slides.pdf 第 1 页]\n')
         result = import_note(self.workspace, source, mode='deep', task_id=plan_task(self.workspace).task_id, html=False)
@@ -133,7 +133,7 @@ class TaskWorkflowTests(unittest.TestCase):
         self.assertFalse((self.workspace / 'notes/deep-001.md').exists())
 
     def test_pdf_placement_placeholder_is_not_validated_as_final_output(self):
-        from handouter.validation import validate_note_output
+        from coursecompiler.validation import validate_note_output
         (self.workspace / 'notes/deep-001.md').write_text('# Draft\n\n[插图位置：Slides.pdf 第 1 页]\n')
         self.assertFalse(validate_note_output(self.workspace, output='notes/deep-001.md').ok)
 
@@ -142,31 +142,31 @@ class TaskWorkflowTests(unittest.TestCase):
             task = Path(kwargs['cwd'])
             (task / 'notes/deep-001.md').write_text('# Deep\n\nComplete.\n')
             return SimpleNamespace(returncode=0)
-        with patch('handouter.agents.codex.availability', return_value=AgentAvailability('codex', True, '/fake/codex', 'cli')), \
-             patch('handouter.agents.codex.build_command', return_value=['/fake/codex']), \
-             patch('handouter.agents.runner.subprocess.run', side_effect=fake_run):
+        with patch('coursecompiler.agents.codex.availability', return_value=AgentAvailability('codex', True, '/fake/codex', 'cli')), \
+             patch('coursecompiler.agents.codex.build_command', return_value=['/fake/codex']), \
+             patch('coursecompiler.agents.runner.subprocess.run', side_effect=fake_run):
             result = run_cli_agent(self.workspace, agent='codex')
         self.assertFalse(result.validation_ok)
         self.assertTrue((self.workspace / 'notes/deep-001.md').is_file())
         self.assertEqual(json.loads((self.workspace / 'state.json').read_text())['agent_output']['status'], 'partial')
 
     def test_browser_asset_identity_is_provided_by_the_configured_plugin(self):
-        from handouter.tasks import asset_fingerprint
+        from coursecompiler.tasks import asset_fingerprint
         path = self.root / 'browser.zip'
         with zipfile.ZipFile(path, 'w') as archive:
             archive.writestr('opaque.dat', 'browser data')
         details = {'source_sha256': 'a' * 64, 'source_fingerprint': 'b' * 64}
-        with patch('handouter.external_collector.inspect_browser_export', return_value=details) as inspect:
+        with patch('coursecompiler.external_collector.inspect_browser_export', return_value=details) as inspect:
             self.assertEqual(asset_fingerprint(path), 'b' * 64)
             inspect.assert_called_once_with(path)
 
     def test_config_input_change_requires_explicit_new_task(self):
-        from handouter.tasks import plan_task
+        from coursecompiler.tasks import plan_task
         self.assertEqual(plan_task(self.workspace, selection={'modes': ['full']}).action, 'refresh_required')
         self.assertEqual(plan_task(self.workspace, input_fingerprint='new-material').action, 'refresh_required')
 
     def test_partial_web_and_manual_only_request_missing_mode(self):
-        from handouter.cli import _continue_payload
+        from coursecompiler.cli import _continue_payload
         (self.workspace / 'notes/deep-001.md').write_text('# Existing\n\nKeep.\n')
         web, code = _continue_payload(self.workspace, agent='web')
         self.assertEqual(code, 0)
@@ -179,8 +179,8 @@ class TaskWorkflowTests(unittest.TestCase):
             self.assertNotIn('notes/deep-001.md', archive.namelist())
 
     def test_cache_tampering_is_rejected_and_cleanup_is_explicit(self):
-        from handouter.stage_cache import MaterialCache
-        from handouter.tasks import inspect_cache, clean_cache
+        from coursecompiler.stage_cache import MaterialCache
+        from coursecompiler.tasks import inspect_cache, clean_cache
         root = self.root / 'cache-root'
         root.mkdir()
         cache = MaterialCache(root, 'lecture', 'synthetic', {'device': 'cpu'})
@@ -200,12 +200,12 @@ class TaskWorkflowTests(unittest.TestCase):
         self.assertFalse(audio.output.exists())
 
     def test_missing_html_dependency_preserves_import_and_records_retry(self):
-        from handouter.tasks import plan_task, import_note, retry_html
+        from coursecompiler.tasks import plan_task, import_note, retry_html
         source = self.root / 'returned.md'
         source.write_text('# Returned\n\nValid content.\n')
         task_id = plan_task(self.workspace).task_id
-        with patch('handouter.doctor.require_features', side_effect=RuntimeError('missing html extra')), \
-             patch('handouter.html_export.export_html') as export:
+        with patch('coursecompiler.doctor.require_features', side_effect=RuntimeError('missing html extra')), \
+             patch('coursecompiler.html_export.export_html') as export:
             result = import_note(self.workspace, source, mode='deep', task_id=task_id)
             self.assertEqual(result['status'], 'imported')
             self.assertEqual(result['html_delivery']['status'], 'failed')
@@ -220,7 +220,7 @@ class TaskWorkflowTests(unittest.TestCase):
     @requires_html
 
     def test_actual_web_import_and_offline_html(self):
-        from handouter.tasks import plan_task, import_note, retry_html
+        from coursecompiler.tasks import plan_task, import_note, retry_html
         source = self.root / 'returned.md'
         source.write_text('# Returned\n\n$\\frac{1}{\\sqrt{x}}$\n', encoding='utf-8')
         task_id = plan_task(self.workspace).task_id

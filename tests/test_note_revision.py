@@ -11,13 +11,13 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from handouter import cli
-from handouter.agents.manual import create_manual_bundle
-from handouter.agents.web import create_web_handoff
-from handouter.revision import read_revision_note, note_text_preserved
-from handouter.service import prepare_lecture, refresh_handoff
-from handouter.tui import _task_cli_args
-from handouter.validation import validate_note_output
+from coursecompiler import cli
+from coursecompiler.agents.manual import create_manual_bundle
+from coursecompiler.agents.web import create_web_handoff
+from coursecompiler.revision import read_revision_note, note_text_preserved
+from coursecompiler.service import prepare_lecture, refresh_handoff
+from coursecompiler.tui import _task_cli_args
+from coursecompiler.validation import validate_note_output
 
 
 class NoteRevisionTests(unittest.TestCase):
@@ -59,7 +59,7 @@ class NoteRevisionTests(unittest.TestCase):
 
     def test_note_only_cli_never_downloads_or_transcribes_and_marks_evidence_limit(self):
         before = self.note.read_bytes()
-        with patch("handouter.service.extract_audio") as download, patch("handouter.service.transcribe_sensevoice") as asr:
+        with patch("coursecompiler.service.extract_audio") as download, patch("coursecompiler.service.transcribe_sensevoice") as asr:
             stream = io.StringIO()
             with contextlib.redirect_stdout(stream):
                 code = cli.main(["revise", str(self.note), "--lecture-id", "derived", "--output-dir", str(self.root / "out"),
@@ -114,10 +114,10 @@ class NoteRevisionTests(unittest.TestCase):
         def read_then_change(*args, **kwargs):
             self.note.write_text("Changed after snapshot")
             return revision
-        with patch("handouter.cli.read_revision_note", side_effect=read_then_change), contextlib.redirect_stdout(io.StringIO()):
+        with patch("coursecompiler.cli.read_revision_note", side_effect=read_then_change), contextlib.redirect_stdout(io.StringIO()):
             code = cli.main(["revise", str(self.note), "--lecture-id", "snapshot", "--output-dir", str(self.root / "out"), "--agent", "none"])
         self.assertEqual(code, 0)
-        from handouter.organization import find_workspace
+        from coursecompiler.organization import find_workspace
         workspace = find_workspace(self.root / 'out', 'snapshot')
         self.assertEqual((workspace / 'transcript/transcript.txt').read_text(), revision['text'])
 

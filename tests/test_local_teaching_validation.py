@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from handouter.note_validation import validate_note_output
+from coursecompiler.note_validation import validate_note_output
 
 
 class LocalTeachingValidationTests(unittest.TestCase):

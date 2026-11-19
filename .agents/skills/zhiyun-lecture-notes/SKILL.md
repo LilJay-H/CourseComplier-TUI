@@ -2,7 +2,7 @@
 name: zhiyun-lecture-notes
 description: >-
   将用户授权的智云课堂材料整理为清晰逐字稿、完整课堂笔记、图文教程讲义、可展开完整讲义或速览讲义。
-  Handouter 会在每次 handoff 中给出本次需要读取的模块清单；Agent 只加载这些模块。
+  CourseCompiler 会在每次 handoff 中给出本次需要读取的模块清单；Agent 只加载这些模块。
 ---
 
 # 智云课堂讲义 Skill（入口）
@@ -42,4 +42,4 @@ description: >-
 - execution/authoring：单元计划；long-course：续写与预算；multi-output：模式协作；formal-reasoning：条件自检。
 - common/delivery：交付与写入边界；common/completion：成品验收。
 
-Handouter 会根据当前配置自动选择这些模块，因此本入口不重复展开所有规则。
+CourseCompiler 会根据当前配置自动选择这些模块，因此本入口不重复展开所有规则。
